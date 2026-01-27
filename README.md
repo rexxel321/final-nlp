@@ -27,6 +27,7 @@ npm install
 ### 3. Setup Environment Variables
 Create a file named `.env.local` in the root directory (same level as `package.json`).
 Add your Groq API Key inside it:
+this is the link : https://console.groq.com/home
 
 ```env
 GROQ_API_KEY=your_api_key_here
