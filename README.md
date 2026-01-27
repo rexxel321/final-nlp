@@ -1,12 +1,13 @@
 # Final NLP Project - FitBuddy Chatbot
 
-This is a Next.js project implementing a Fitness Chatbot using the Llama 3 model (via Groq Cloud).
+This is a Next.js project implementing a Fitness Chatbot using Llama 3 (via Groq Cloud) and Gemini (via Google AI).
 
 ## Features
 - **FitBuddy Persona**: A helpful fitness assistant.
+- **Dual Models**: Switch between Llama 3 and Gemini.
 - **Memory**: Remembers conversation history.
 - **Session Management**: "New Chat" and "Summarize Session" features.
-- **Tech Stack**: Next.js (App Router), TypeScript, Tailwind CSS, Groq SDK.
+- **Tech Stack**: Next.js (App Router), TypeScript, Tailwind CSS, Groq SDK, Google Generative AI SDK.
 
 ## Getting Started
 
@@ -25,14 +26,13 @@ npm install
 ```
 
 ### 3. Setup Environment Variables
-Create a file named `.env.local` in the root directory (same level as `package.json`).
-Add your Groq API Key inside it:
-this is the link : https://console.groq.com/home
+Create a file named `.env.local` in the root directory.
+Add your API Keys:
 
 ```env
-GROQ_API_KEY=your_api_key_here
+GROQ_API_KEY=your_groq_key_here
+GEMINI_API_KEY=your_gemini_key_here
 ```
-*(Ask the project owner for the key if you don't have one)*
 
 ### 4. Run the Development Server
 ```bash

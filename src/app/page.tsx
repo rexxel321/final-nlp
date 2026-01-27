@@ -13,6 +13,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("Llama 3");
 
   const handleSendMessage = async (messageOverride?: string) => {
     const textToSend = messageOverride || inputValue;
@@ -34,7 +35,10 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({
+          messages: updatedMessages,
+          model: selectedModel
+        }),
       });
 
       const data = await response.json();
@@ -66,6 +70,8 @@ export default function Home() {
     <main className="flex min-h-screen bg-white">
       <Sidebar
         onNewChat={handleNewChat}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
       />
       <ChatInterface
         messages={messages}

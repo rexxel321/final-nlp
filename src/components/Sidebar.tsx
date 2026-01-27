@@ -5,13 +5,14 @@ import { Plus, ChevronDown, Check } from 'lucide-react';
 
 interface SidebarProps {
   onNewChat: () => void;
+  selectedModel: string;
+  onSelectModel: (model: string) => void;
 }
 
-const Sidebar = ({ onNewChat }: SidebarProps) => {
+const Sidebar = ({ onNewChat, selectedModel, onSelectModel }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("Llama 3");
 
-  const models = ["Llama 3", "GPT-4"];
+  const models = ["Llama 3", "Gemini"];
 
   return (
     <div className="w-[280px] h-screen bg-[#f9f9f9] flex flex-col p-6 border-r border-gray-100 relative">
@@ -38,7 +39,7 @@ const Sidebar = ({ onNewChat }: SidebarProps) => {
               <button
                 key={model}
                 onClick={() => {
-                  setSelectedModel(model);
+                  onSelectModel(model);
                   setIsOpen(false);
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between"

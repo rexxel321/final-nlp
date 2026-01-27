@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const apiKey = process.env.GROQ_API_KEY;
+// Groq Setup
+const groqApiKey = process.env.GROQ_API_KEY;
+if (!groqApiKey) console.error('GROQ_API_KEY is not set');
+const groq = new Groq({ apiKey: groqApiKey });
 
-if (!apiKey) {
-    console.error('GROQ_API_KEY is not set');
-}
-
-const groq = new Groq({
-    apiKey: apiKey,
-});
+// Gemini Setup
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) console.error('GEMINI_API_KEY is not set');
+const genAI = new GoogleGenerativeAI(geminiApiKey || '');
 
 export async function POST(req: Request) {
     try {
-        const { messages } = await req.json();
+        const { messages, model } = await req.json();
 
         if (!messages || !Array.isArray(messages)) {
             return NextResponse.json(
@@ -22,22 +23,55 @@ export async function POST(req: Request) {
             );
         }
 
-        const systemMessage = {
-            role: 'system',
-            content: 'You are FitBuddy, an expert fitness and nutrition coach. Your goal is to provide helpful, accurate, and encouraging advice to users looking to improve their health. Provide actionable steps and clear explanations. Be friendly and motivating.',
-        };
+        const systemMessageContent = 'You are FitBuddy, an expert fitness and nutrition coach. Your goal is to provide helpful, accurate, and encouraging advice to users looking to improve their health. Provide actionable steps and clear explanations. Be friendly and motivating.';
+        let responseContent = "";
 
-        const completion = await groq.chat.completions.create({
-            messages: [
-                systemMessage,
-                ...messages
-            ],
-            model: 'llama-3.3-70b-versatile',
-        });
+        if (model === "Gemini") {
+            // Gemini Logic
+            const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-        const responseCurrent = completion.choices[0]?.message?.content || "";
+            // Convert messages to Gemini format (history)
+            // Gemini expects history + new message.
+            const chat = geminiModel.startChat({
+                history: messages.slice(0, -1).map(msg => ({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.content }]
+                })),
+                generationConfig: {
+                    maxOutputTokens: 1000,
+                },
+            });
 
-        return NextResponse.json({ response: responseCurrent });
+            const lastMessage = messages[messages.length - 1].content;
+            // Prepend system instruction to the last message since Gemini Pro (standard) via API handles system prompts differently or strictly.
+            // A simple way is to prepend it to the first user message or context, but here we can just prepend to prompt for simplicity if history is short, but for `startChat`, system prompts are best handled via initial context or separate config if available (gemini-1.5-pro has systemInstruction).
+            // We will stick to "gemini-pro" and prepend instructions if needed, or rely on the persona being established in context.
+            // Let's prepend to the prompt to be safe.
+            const prompt = `${systemMessageContent}\n\nUser query: ${lastMessage}`;
+
+            const result = await chat.sendMessage(prompt);
+            const response = await result.response;
+            responseContent = response.text();
+
+        } else {
+            // Llama 3 (Groq) Logic
+            const systemMessage = {
+                role: 'system',
+                content: systemMessageContent,
+            };
+
+            const completion = await groq.chat.completions.create({
+                messages: [
+                    systemMessage,
+                    ...messages
+                ],
+                model: 'llama-3.3-70b-versatile',
+            });
+
+            responseContent = completion.choices[0]?.message?.content || "";
+        }
+
+        return NextResponse.json({ response: responseContent });
     } catch (error) {
         console.error('Error in chat API:', error);
         return NextResponse.json(
