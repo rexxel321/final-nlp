@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const systemMessageContent = 'You are FitBuddy, an expert fitness and nutrition coach. Your goal is to provide helpful, accurate, and encouraging advice to users looking to improve their health. Provide actionable steps and clear explanations. Be friendly and motivating.';
+        const systemMessageContent = 'You are FitBuddy, an expert fitness and nutrition coach. IMPORTANT: Keep your responses CONCISE and BRIEF. Provide helpful advice using short sentences and bullet points. Avoid long paragraphs. Get straight to the point while remaining friendly and motivating.';
         let responseContent = "";
 
         if (model === "Gemini") {
@@ -46,9 +46,16 @@ export async function POST(req: Request) {
             const lastMessage = messages[messages.length - 1].content;
             const prompt = `${systemMessageContent}\n\nUser query: ${lastMessage}`;
 
-            const result = await chat.sendMessage(prompt);
-            const response = await result.response;
-            responseContent = response.text();
+            console.log("Gemini prompt sent...");
+            try {
+                const result = await chat.sendMessage(prompt);
+                const response = await result.response;
+                responseContent = response.text();
+                console.log("Gemini response received!");
+            } catch (err: any) {
+                console.error("GEMINI_ERROR_DETAIL:", err);
+                throw err;
+            }
 
         } else {
             console.log("Using Llama model");
