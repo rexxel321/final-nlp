@@ -28,25 +28,22 @@ export async function POST(req: Request) {
 
         if (model === "Gemini") {
             // Gemini Logic
-            const geminiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+            const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             // Convert messages to Gemini format (history)
-            // Gemini expects history + new message.
+            const history = messages.slice(0, -1).map(msg => ({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.content }]
+            }));
+
             const chat = geminiModel.startChat({
-                history: messages.slice(0, -1).map(msg => ({
-                    role: msg.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.content }]
-                })),
+                history: history,
                 generationConfig: {
-                    maxOutputTokens: 1000,
+                    maxOutputTokens: 4096,
                 },
             });
 
             const lastMessage = messages[messages.length - 1].content;
-            // Prepend system instruction to the last message since Gemini Pro (standard) via API handles system prompts differently or strictly.
-            // A simple way is to prepend it to the first user message or context, but here we can just prepend to prompt for simplicity if history is short, but for `startChat`, system prompts are best handled via initial context or separate config if available (gemini-1.5-pro has systemInstruction).
-            // We will stick to "gemini-pro" and prepend instructions if needed, or rely on the persona being established in context.
-            // Let's prepend to the prompt to be safe.
             const prompt = `${systemMessageContent}\n\nUser query: ${lastMessage}`;
 
             const result = await chat.sendMessage(prompt);
@@ -54,6 +51,7 @@ export async function POST(req: Request) {
             responseContent = response.text();
 
         } else {
+            console.log("Using Llama model");
             // Llama 3 (Groq) Logic
             const systemMessage = {
                 role: 'system',
