@@ -2,10 +2,13 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import QuickReplies from './QuickReplies';
 
 interface Message {
     role: 'user' | 'assistant';
     content: string;
+    source?: string; // 'Rule-Based' or 'AI'
+    intent?: string;
 }
 
 interface ChatInterfaceProps {
@@ -13,7 +16,7 @@ interface ChatInterfaceProps {
     inputValue: string;
     setInputValue: (val: string) => void;
     isLoading: boolean;
-    onSendMessage: () => void;
+    onSendMessage: (message?: string) => void;
     onSummarize: () => void;
 }
 
@@ -35,6 +38,10 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
         }
     };
 
+    const handleQuickReply = (text: string) => {
+        onSendMessage(text);
+    };
+
     return (
         <div className="flex-1 h-screen flex flex-col bg-white relative">
 
@@ -49,6 +56,12 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                             How can I help with<br />
                             your training today?
                         </h2>
+
+                        {/* Quick Replies - Show on initial load */}
+                        <div className="mt-12">
+                            <p className="text-gray-500 mb-4 text-sm">Try asking:</p>
+                            <QuickReplies onQuickReply={handleQuickReply} disabled={isLoading} />
+                        </div>
                     </div>
                 )}
 
@@ -57,9 +70,20 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[80%] rounded-2xl px-6 py-4 ${msg.role === 'user'
-                                    ? 'bg-black text-white rounded-br-none'
-                                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                                ? 'bg-black text-white rounded-br-none'
+                                : 'bg-gray-100 text-gray-800 rounded-bl-none'
                                 }`}>
+                                {/* Show source badge for assistant messages */}
+                                {msg.role === 'assistant' && msg.source && (
+                                    <div className="mb-2">
+                                        <span className={`text-xs px-2 py-1 rounded-full ${msg.source === 'Rule-Based'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-blue-100 text-blue-700'
+                                            }`}>
+                                            {msg.source === 'Rule-Based' ? '⚡ Rule-Based' : '🤖 AI-Powered'}
+                                        </span>
+                                    </div>
+                                )}
                                 <p className="whitespace-pre-wrap">{msg.content}</p>
                             </div>
                         </div>
@@ -92,9 +116,13 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                             disabled={isLoading}
                         />
                         <button
-                            onClick={onSendMessage}
+                            onClick={() => onSendMessage()}
                             disabled={isLoading}
-                            className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors ${isLoading ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-300 hover:bg-black'
+                            className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors ${isLoading
+                                    ? 'bg-gray-300 cursor-not-allowed'
+                                    : inputValue.trim()
+                                        ? 'bg-black hover:bg-gray-800'
+                                        : 'bg-gray-300 hover:bg-gray-400'
                                 }`}
                         >
                             <Send className="w-4 h-4" />
