@@ -2,23 +2,21 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Sidebar from "@/components/Sidebar";
-import ChatInterface from "@/components/ChatInterface";
+import ChatInterface, { Message } from "@/components/ChatInterface";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { generateId } from "@/lib/uuid";
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState("Llama 3");
   const [sessionId, setSessionId] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // New State Variables
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -86,20 +84,74 @@ export default function Home() {
     prevModelRef.current = selectedModel;
   }, [selectedModel]);
 
-  const handleSendMessage = async (messageOverride?: string) => {
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+      setError("Generation stopped by user.");
+    }
+  };
+
+  const handleEditMessage = (index: number, newContent: string) => {
+    // 1. Slice messages up to the index (keeping previous context)
+    const previousMessages = messages.slice(0, index);
+    setMessages(previousMessages);
+
+    // 2. Clear error
+    setError(null);
+
+    // 3. Resend with new content
+    handleSendMessage(newContent, previousMessages);
+  };
+
+  const handleRegenerate = () => {
+    // Basic Regenerate: Remove last assistant message and re-submit the last user message
+    if (messages.length === 0) return;
+
+    // Find last user message index
+    const lastUserIndex = messages.findLastIndex(m => m.role === 'user');
+    if (lastUserIndex === -1) return;
+
+    // Slice history up to that user message (inclusive)
+    // Actually, we just need to remove the AI response if it exists after it.
+    // Simplifying: Just take everything up to the last user message
+    const previousMessages = messages.slice(0, lastUserIndex);
+    const lastUserMsg = messages[lastUserIndex];
+
+    setMessages(previousMessages);
+    handleSendMessage(lastUserMsg.content, previousMessages);
+  };
+
+  const handleDeleteMessage = (index: number) => {
+    // LIFO Policy: Only allow deleting the last message (or last pair if needed, but user said "one by one from latest")
+    if (index === messages.length - 1) {
+      setMessages(prev => prev.slice(0, -1));
+    }
+  };
+
+  const handleSendMessage = async (messageOverride?: string, customHistory?: Message[]) => {
     const textToSend = messageOverride || inputValue;
     if (!textToSend.trim() || isLoading) return;
 
     if (!messageOverride) {
       setInputValue('');
     }
+    setError(null);
 
+    // If using custom history (e.g. from edit), use that. Otherwise use current messages.
+    const currentHistory = customHistory || messages;
     const newMessage: Message = { role: 'user', content: textToSend };
-    const updatedMessages = [...messages, newMessage];
+    const updatedMessages = [...currentHistory, newMessage];
 
     setMessages(updatedMessages);
     setIsLoading(true);
     setFollowUps([]); // Clear old follow-ups
+
+    // Abort Controller Setup
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch('/api/chat', {
@@ -112,6 +164,7 @@ export default function Home() {
           model: selectedModel,
           sessionId: sessionId
         }),
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -122,7 +175,7 @@ export default function Home() {
       const data = await response.json();
 
       if (data.response) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: data.response, model: selectedModel }]);
 
         // Refresh sidebar if a new title was generated
         if (data.title) {
@@ -153,13 +206,19 @@ export default function Home() {
         }, 3000); // 3 second delay as requested
 
       } else {
-        console.error("No response from API");
+        throw new Error("No response from AI");
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Request aborted');
+        return;
+      }
       console.error('Error sending message:', error);
+      setError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -170,6 +229,7 @@ export default function Home() {
     setMessages([]);
     setInputValue('');
     setFollowUps([]);
+    setError(null);
     // Optionally fetch new suggestions here
   };
 
@@ -188,6 +248,7 @@ export default function Home() {
         currentSessionId={sessionId}
         onSessionSelect={(id) => {
           setSessionId(id);
+          setError(null);
           // Re-fetch history for this session
           const loadHistory = async () => {
             try {
@@ -225,6 +286,11 @@ export default function Home() {
           onSummarize={handleSummarize}
           suggestions={suggestions}
           followUps={followUps}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={handleDeleteMessage}
+          onStopGeneration={handleStopGeneration}
+          onRegenerate={handleRegenerate}
+          error={error}
         />
       </motion.div>
     </div>

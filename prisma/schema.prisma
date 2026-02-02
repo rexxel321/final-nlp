@@ -25,6 +25,8 @@ model Message {
   sessionId String
   session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  model     String?
+  versions  Json?    // Store edit history [{role, content, model, createdAt}]
 }
 
 model ModelSettings {

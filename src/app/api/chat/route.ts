@@ -73,12 +73,20 @@ async function getCompletion(model: string, messages: any[], temperature: number
 
     } else {
         // Llama 3 (Groq)
-        const completion = await groq.chat.completions.create({
-            messages: messages,
-            model: 'llama-3.3-70b-versatile',
-            temperature: temperature
-        });
-        return completion.choices[0]?.message?.content || "";
+        try {
+            if (!groqApiKey) throw new Error("Groq API Key (GROQ_API_KEY) is missing");
+            const completion = await groq.chat.completions.create({
+                messages: messages,
+                model: 'llama-3.3-70b-versatile',
+                temperature: temperature
+            });
+            return completion.choices[0]?.message?.content || "";
+        } catch (error: any) {
+            if (error?.status === 401) {
+                throw new Error("Invalid Groq API Key. Please check your .env file.");
+            }
+            throw error;
+        }
     }
 }
 
@@ -157,6 +165,7 @@ export async function POST(req: Request) {
             try {
                 newTitle = await getCompletion(model, titlePrompt);
                 newTitle = newTitle.replace(/^"|"$/g, '').trim(); // Remove quotes
+                if (newTitle.length > 50) newTitle = newTitle.substring(0, 50) + "..."; // Truncate to fit DB
             } catch (e) { console.error("Title gen failed", e); }
         }
 
@@ -187,7 +196,12 @@ export async function POST(req: Request) {
             // Save Assistant Message
             if (responseContent) {
                 await prisma.message.create({
-                    data: { content: responseContent, role: 'assistant', sessionId }
+                    data: {
+                        content: responseContent,
+                        role: 'assistant',
+                        sessionId,
+                        model: model // Save the model name
+                    }
                 });
             }
         }

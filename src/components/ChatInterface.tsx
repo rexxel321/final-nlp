@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Send, Sparkles, User, Bot, StopCircle, Edit2, AlertCircle, RefreshCw, Copy, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Message {
+export interface Message {
     role: 'user' | 'assistant';
     content: string;
+    model?: string;
+    id?: string;
 }
 
 interface ChatInterfaceProps {
@@ -18,20 +20,57 @@ interface ChatInterfaceProps {
     onSummarize: () => void;
     suggestions: string[];
     followUps?: string[];
+    onEditMessage?: (index: number, newContent: string) => void;
+    onDeleteMessage?: (index: number) => void;
+    onStopGeneration?: () => void;
+    onRegenerate?: () => void;
+    error?: string | null;
 }
 
-const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendMessage, onSummarize, suggestions, followUps = [] }: ChatInterfaceProps) => {
+const ChatInterface = ({
+    messages,
+    inputValue,
+    setInputValue,
+    isLoading,
+    onSendMessage,
+    onSummarize,
+    suggestions,
+    followUps = [],
+    onEditMessage,
+    onDeleteMessage,
+    onStopGeneration,
+    onRegenerate,
+    error
+}: ChatInterfaceProps) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editValue, setEditValue] = useState("");
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, isLoading, followUps]);
+    }, [messages, isLoading, followUps, error]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             onSendMessage();
         }
+    };
+
+    const startEditing = (index: number, content: string) => {
+        setEditingIndex(index);
+        setEditValue(content);
+    };
+
+    const saveEdit = (index: number) => {
+        if (onEditMessage && editValue.trim() !== messages[index].content) {
+            onEditMessage(index, editValue);
+        }
+        setEditingIndex(null);
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
     };
 
     return (
@@ -69,23 +108,97 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
 
                     {/* Chat Messages */}
                     <div className="space-y-8">
-                        <AnimatePresence mode='popLayout'>
-                            {messages.map((msg, index) => (
+                        {messages.map((msg, index) => {
+                            const isLastMessage = index === messages.length - 1;
+                            const isUser = msg.role === 'user';
+
+                            return (
                                 <motion.div
                                     key={index}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    className={`group flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                                 >
-                                    <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-6 py-5 shadow-sm leading-relaxed text-[15px] ${msg.role === 'user'
-                                            ? 'bg-black text-white rounded-br-sm'
-                                            : 'bg-[#F0F4F9] text-gray-800 rounded-bl-sm'
-                                        }`}>
-                                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                                    {/* Sender Name */}
+                                    <div className={`flex items-center gap-2 mb-1 text-xs font-bold text-gray-400 uppercase tracking-wider ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        {isUser ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
+                                        <span>{isUser ? 'You' : (msg.model || 'Assistant')}</span>
                                     </div>
+
+                                    {/* Bubble / Input */}
+                                    {editingIndex === index ? (
+                                        <div className="w-full max-w-3xl bg-white border border-blue-200 rounded-xl p-4 shadow-lg z-10">
+                                            <textarea
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                className="w-full min-h-[100px] p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium leading-relaxed"
+                                                style={{ color: '#111827' }} // Explicit hex for safety
+                                            />
+                                            <div className="flex justify-end gap-2 mt-2">
+                                                <button onClick={() => setEditingIndex(null)} className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+                                                <button onClick={() => saveEdit(index)} className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95">Save & Regenerate</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="relative max-w-[85%] md:max-w-[75%] group">
+                                            <div className={`rounded-2xl px-6 py-5 shadow-sm leading-relaxed text-[15px] ${isUser
+                                                ? 'bg-black text-white rounded-br-sm'
+                                                : 'bg-[#F0F4F9] text-gray-800 rounded-bl-sm'
+                                                }`}>
+                                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                            </div>
+
+                                            {/* Action Buttons Container */}
+                                            <div className={`absolute -bottom-8 flex items-center gap-1 ${isUser ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+
+                                                {/* Copy Button */}
+                                                <button
+                                                    onClick={() => copyToClipboard(msg.content)}
+                                                    className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition-colors"
+                                                    title="Copy to clipboard"
+                                                >
+                                                    <Copy className="w-3 h-3" />
+                                                </button>
+
+                                                {/* Edit Button (User only) */}
+                                                {isUser && !isLoading && (
+                                                    <button
+                                                        onClick={() => startEditing(index, msg.content)}
+                                                        className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition-colors"
+                                                        title="Edit message"
+                                                    >
+                                                        <Edit2 className="w-3 h-3" />
+                                                    </button>
+                                                )}
+
+                                                {/* Delete Button (Only Last Message - LIFO) */}
+                                                {isLastMessage && !isLoading && onDeleteMessage && (
+                                                    <button
+                                                        onClick={() => onDeleteMessage(index)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                                                        title="Delete message"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                )}
+
+                                                {/* Regenerate Button (Assistant only, last message) */}
+                                                {!isUser && isLastMessage && !isLoading && onRegenerate && (
+                                                    <button
+                                                        onClick={onRegenerate}
+                                                        className="ml-2 flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                                                        title="Regenerate response"
+                                                    >
+                                                        <RefreshCw className="w-3 h-3" />
+                                                        <span>Regenerate</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </motion.div>
-                            ))}
-                        </AnimatePresence>
+                            );
+                        })}
 
                         {/* Follow-up Questions */}
                         {!isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && followUps && followUps.length > 0 && (
@@ -93,7 +206,7 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="flex flex-wrap gap-2 mt-4 ml-2 max-w-[85%]"
+                                className="flex flex-wrap gap-2 mt-4 ml-6 max-w-[85%]"
                             >
                                 {followUps.map((q, i) => (
                                     <button
@@ -108,13 +221,40 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                             </motion.div>
                         )}
 
+                        {/* Error Banner */}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl mx-auto max-w-2xl"
+                            >
+                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                <div className="text-sm">{error}</div>
+                            </motion.div>
+                        )}
+
                         {/* Thinking Indicator */}
                         {isLoading && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                                <div className="bg-transparent px-4 py-2 flex gap-1 items-center">
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                                <div className="bg-transparent px-4 py-2 flex flex-col gap-2">
+                                    <div className="flex items-center gap-2 mb-1 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <Bot className="w-3 h-3" />
+                                        <span>Thinking...</span>
+                                    </div>
+                                    <div className="flex gap-1 items-center bg-[#F0F4F9] px-6 py-4 rounded-2xl rounded-bl-sm">
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                                    </div>
+                                    {onStopGeneration && (
+                                        <button
+                                            onClick={onStopGeneration}
+                                            className="mt-2 flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 text-xs font-medium rounded-full shadow-sm hover:bg-red-50 transition-colors w-fit"
+                                        >
+                                            <StopCircle className="w-3 h-3" />
+                                            Stop Generating
+                                        </button>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -141,11 +281,11 @@ const ChatInterface = ({ messages, inputValue, setInputValue, isLoading, onSendM
                             onClick={() => onSendMessage()}
                             disabled={isLoading || !inputValue.trim()}
                             className={`absolute right-2 p-2.5 rounded-full transition-all duration-200 ${isLoading || !inputValue.trim()
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-black text-white hover:bg-gray-800 hover:scale-105 active:scale-95 shadow-md'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-black text-white hover:bg-gray-800 hover:scale-105 active:scale-95 shadow-md'
                                 }`}
                         >
-                            <Send className="w-4 h-4" />
+                            {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>
                     </div>
                     <div className="text-center mt-2">
