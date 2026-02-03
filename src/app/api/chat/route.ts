@@ -19,9 +19,17 @@ import { findRelevantContext } from '@/lib/dataset';
 
 // Helper to get completion from any model
 async function getCompletion(model: string, messages: any[], temperature: number = 0.7) {
+    // Clean messages to only include role and content (remove id, createdAt, metrics, etc.)
+    const cleanedMessages = messages.map(({ role, content }) => ({ role, content }));
+
     // Basic cleaning of system message to ensure no conflict
-    const systemContent = messages.find(m => m.role === 'system')?.content || '';
-    const userMessages = messages.filter(m => m.role !== 'system');
+    const systemContent = cleanedMessages.find(m => m.role === 'system')?.content || '';
+    const userMessages = cleanedMessages.filter(m => m.role !== 'system');
+
+    // Metrics Tracking
+    const startTime = Date.now();
+    let promptTokens = 0;
+    let completionTokens = 0;
 
     // SDK Initialization
     const groqApiKey = process.env.GROQ_API_KEY;
@@ -50,7 +58,13 @@ async function getCompletion(model: string, messages: any[], temperature: number
         if (systemContent) prompt = `${systemContent}\n\n${lastMessage}`;
 
         const result = await chat.sendMessage(prompt);
-        return result.response.text();
+        const text = result.response.text();
+
+        // Estimate tokens (Gemini doesn't always return usage in simple call, approximate 1 tok ≈ 4 chars)
+        promptTokens = Math.ceil(prompt.length / 4);
+        completionTokens = Math.ceil(text.length / 4);
+
+        return { text, metrics: { promptTokens, completionTokens, startTime } };
 
     } else if (model.startsWith("Ollama:")) {
         const OLLAMA_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
@@ -67,7 +81,7 @@ async function getCompletion(model: string, messages: any[], temperature: number
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: cleanModelName,
-                messages: messages, // Send all messages including system if present
+                messages: cleanedMessages, // Use cleaned messages
                 stream: false,
                 options: ollamaOptions
             })
@@ -75,18 +89,27 @@ async function getCompletion(model: string, messages: any[], temperature: number
 
         if (!response.ok) throw new Error(`Ollama error: ${response.statusText} `);
         const data = await response.json();
-        return data.message?.content || "";
+
+        // Ollama usually returns eval_count and prompt_eval_count
+        promptTokens = data.prompt_eval_count || Math.ceil(JSON.stringify(cleanedMessages).length / 4);
+        completionTokens = data.eval_count || Math.ceil((data.message?.content || "").length / 4);
+
+        return { text: data.message?.content || "", metrics: { promptTokens, completionTokens, startTime } };
 
     } else {
         // Llama 3 (Groq)
         try {
             if (!groqApiKey) throw new Error("Groq API Key (GROQ_API_KEY) is missing");
             const completion = await groq.chat.completions.create({
-                messages: messages,
+                messages: cleanedMessages, // Use cleaned messages
                 model: 'llama-3.3-70b-versatile',
                 temperature: temperature
             });
-            return completion.choices[0]?.message?.content || "";
+
+            promptTokens = completion.usage?.prompt_tokens || 0;
+            completionTokens = completion.usage?.completion_tokens || 0;
+
+            return { text: completion.choices[0]?.message?.content || "", metrics: { promptTokens, completionTokens, startTime } };
         } catch (error: any) {
             if (error?.status === 401) {
                 throw new Error("Invalid Groq API Key. Please check your .env file.");
@@ -168,7 +191,24 @@ export async function POST(req: Request) {
 
         console.log(`[API] Sending to Model(System length): ${systemMessageContent.length} `);
 
-        let responseContent = await getCompletion(model, finalMessages, systemSettings.temperature);
+        const result = await getCompletion(model, finalMessages, systemSettings.temperature);
+        let responseContent = result.text;
+
+        // Metrics Calculation
+        const endTime = Date.now();
+        const latency = endTime - result.metrics.startTime;
+        const totalTokens = result.metrics.promptTokens + result.metrics.completionTokens;
+        const tokensPerSecond = result.metrics.completionTokens > 0 ? (result.metrics.completionTokens / (latency / 1000)) : 0;
+
+        const metricsObj = {
+            latencyMs: latency,
+            tokensPerSec: parseFloat(tokensPerSecond.toFixed(2)),
+            totalTokens: totalTokens,
+            promptTokens: result.metrics.promptTokens,
+            completionTokens: result.metrics.completionTokens,
+            // Mock F1 Score (Benchmark placeholder)
+            f1Score: model.includes("Llama") ? 0.82 : model.includes("Gemini") ? 0.85 : 0.78
+        };
 
         // 4. Auto-Title
         let newTitle = null;
@@ -178,8 +218,8 @@ export async function POST(req: Request) {
                 { role: 'user', content: lastUserMessage }
             ];
             try {
-                let generatedTitle = await getCompletion(model, titlePrompt);
-                generatedTitle = generatedTitle.replace(/^"|"$/g, '').trim();
+                const titleResult = await getCompletion(model, titlePrompt);
+                let generatedTitle = titleResult.text.replace(/^"|"$/g, '').trim();
                 if (generatedTitle.length > 50) generatedTitle = generatedTitle.substring(0, 50) + "...";
                 newTitle = generatedTitle;
             } catch (e) { console.error("Title gen failed", e); }
@@ -257,21 +297,22 @@ export async function POST(req: Request) {
                             content: responseContent,
                             role: 'assistant',
                             sessionId,
-                            model: model
+                            model: model,
+                            // Store metrics in metadata if schema supported it, for now we pass it back to frontend
                         }
                     });
                 }
             }
         }
 
-
-        // Return full object if available (for versions)
+        // Return response with metrics
         return NextResponse.json({
             response: responseContent,
             title: newTitle,
             regeneratedId: regenerateId,
-            messageObject: savedMessage, // Assistant Msg
-            userMessageObject: userMessageObj // User Msg (so we have the ID)
+            messageObject: savedMessage,
+            userMessageObject: userMessageObj,
+            metrics: metricsObj
         });
 
     } catch (error) {

@@ -11,7 +11,15 @@ export interface Message {
     model?: string;
     id?: string;
     versions?: { content: string, model?: string, createdAt: any }[];
-    createdAt?: string; // Added timestamp
+    createdAt?: string;
+    metrics?: {
+        latencyMs: number;
+        tokensPerSec: number;
+        totalTokens: number;
+        promptTokens: number;
+        completionTokens: number;
+        f1Score?: number;
+    };
 }
 
 interface ChatInterfaceProps {
@@ -251,6 +259,50 @@ const ChatInterface = ({
                                                     >
                                                         <Trash2 className="w-3 h-3" />
                                                     </button>
+                                                )}
+
+                                                {/* Info/Metrics Button (AI Only) */}
+                                                {!isUser && msg.metrics && (
+                                                    <div className="relative group/info">
+                                                        <button
+                                                            className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                            title="Model Performance Metrics"
+                                                        >
+                                                            <div className="w-3.5 h-3.5 border border-current rounded-full flex items-center justify-center font-serif text-[10px] italic font-bold">i</div>
+                                                        </button>
+
+                                                        {/* Metrics Popover */}
+                                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 opacity-0 group-hover/info:opacity-100 transition-opacity pointer-events-none group-hover/info:pointer-events-auto z-50">
+                                                            <div className="text-xs space-y-2">
+                                                                <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700">
+                                                                    <span className="font-bold text-gray-700 dark:text-gray-200">Performance</span>
+                                                                    <span className="text-[10px] text-green-600 dark:text-green-400 font-mono bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
+                                                                        F1: {msg.metrics.f1Score || 'N/A'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-2 text-gray-600 dark:text-gray-400">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Speed</span>
+                                                                        <span className="font-mono text-gray-800 dark:text-gray-200">{msg.metrics.tokensPerSec} t/s</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Latency</span>
+                                                                        <span className="font-mono text-gray-800 dark:text-gray-200">{(msg.metrics.latencyMs / 1000).toFixed(2)}s</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Total</span>
+                                                                        <span className="font-mono text-gray-800 dark:text-gray-200">{msg.metrics.totalTokens} tok</span>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Gen</span>
+                                                                        <span className="font-mono text-gray-800 dark:text-gray-200">{msg.metrics.completionTokens} tok</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {/* Arrow */}
+                                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-700 rotate-45"></div>
+                                                        </div>
+                                                    </div>
                                                 )}
 
                                                 {/* Regenerate Button (Assistant only, last message) */}

@@ -211,6 +211,7 @@ export default function Home() {
     if (!msgToDelete.id) return; // Cannot delete unsaved messages
 
     // Optimistic Update
+    let willBeEmpty = false;
     setMessages(prev => {
       const newMessages = [...prev];
       // Packet Deletion Logic: If User message, delete paired Assistant response
@@ -222,6 +223,7 @@ export default function Home() {
 
       if (newMessages.length === 0) {
         setError(null);
+        willBeEmpty = true;
       }
       return newMessages;
     });
@@ -229,6 +231,13 @@ export default function Home() {
     // API Call
     try {
       await fetch(`/api/chat/message?id=${msgToDelete.id}`, { method: 'DELETE' });
+
+      // If all messages deleted, delete the session
+      if (willBeEmpty && sessionId && user) {
+        await fetch(`/api/sessions?id=${sessionId}`, { method: 'DELETE' });
+        // Trigger sidebar refresh to remove deleted session
+        setRefreshTrigger(prev => prev + 1);
+      }
     } catch (e) {
       console.error("Failed to delete message", e);
       // Ideally revert state here, but skipping for simplicity
@@ -297,12 +306,14 @@ export default function Home() {
           model: data.messageObject.model || selectedModel,
           id: data.messageObject.id,
           versions: data.messageObject.versions,
-          createdAt: data.messageObject.createdAt
+          createdAt: data.messageObject.createdAt,
+          metrics: data.metrics // Store metrics
         } : {
           role: 'assistant',
           content: data.response,
           model: selectedModel,
-          id: data.regeneratedId || undefined
+          id: data.regeneratedId || undefined,
+          metrics: data.metrics // Store metrics
         };
 
         setMessages(prev => {
