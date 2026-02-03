@@ -132,6 +132,26 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
     // Appearance
     const [chatBackground, setChatBackground] = useState('');
     const [bgOpacity, setBgOpacity] = useState(0.3);
+    const [sidebarOpacity, setSidebarOpacity] = useState(1.0);
+    const [emojiSearch, setEmojiSearch] = useState('');
+
+    // Full emoji list for searchable picker
+    const ALL_EMOJIS = [
+        '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋',
+        '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥',
+        '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎',
+        '🤓', '🧐', '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖',
+        '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽',
+        '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '💌', '💘', '💝', '💖', '💗', '💓',
+        '💞', '💕', '💟', '❣️', '💔', '❤️‍🔥', '❤️‍🩹', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫',
+        '💦', '💨', '🕳️', '💣', '💬', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉',
+        '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪',
+        '🎮', '🎲', '🎯', '🎳', '🎰', '🎬', '🎤', '🎧', '🎼', '🎵', '🎶', '🎹', '🎸', '🎻', '🪕', '🎺', '🎷', '🪗', '🪘', '🎨',
+        '🏃', '🚶', '🧘', '🏋️', '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏓', '🏸', '🏒', '🥅', '⛳', '🎣', '🤿', '🎿', '⛷️', '🏂',
+        '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🧊', '🍕', '🍔', '🍟', '🌭', '🍿', '🧈',
+        '💻', '🖥️', '🖱️', '⌨️', '📱', '☎️', '📞', '📟', '📠', '📺', '📻', '🎙️', '📷', '📸', '📹', '🎥', '📽️', '🎬', '💾', '💿',
+        '⭐', '🌟', '✨', '💫', '🔥', '💥', '❄️', '🌈', '☀️', '🌙', '⚡', '🌊', '🍀', '🌸', '🌺', '🌻', '🌷', '🌹', '💐', '🌴'
+    ];
 
     useEffect(() => {
         if (isOpen) {
@@ -232,7 +252,8 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                 statusText: statusText || null,
                 statusDuration: statusEmoji || statusText ? statusDuration : null,
                 backgroundImage: chatBackground || null,
-                backgroundOpacity: bgOpacity
+                backgroundOpacity: bgOpacity,
+                sidebarOpacity: sidebarOpacity
             };
 
             if (newPassword && oldPassword) {
@@ -274,9 +295,13 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
     const menuItems = [
         { id: 'my-account', label: 'My Account', icon: User },
         { id: 'appearance', label: 'Appearance', icon: Palette },
-        { id: 'chat-background', label: 'Chat Background', icon: ImageIcon },
         ...(user?.role === 'ADMIN' ? [{ id: 'admin', label: 'Admin Panel', icon: Shield }] : [])
     ];
+
+    // Filter emojis based on search
+    const filteredEmojis = emojiSearch
+        ? ALL_EMOJIS.filter(e => e.includes(emojiSearch))
+        : ALL_EMOJIS.slice(0, 50);
 
     return (
         <AnimatePresence>
@@ -297,9 +322,9 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                     className="bg-white dark:bg-[#313338] rounded-xl shadow-2xl w-full max-w-4xl h-[600px] flex overflow-hidden relative"
                 >
                     {/* Left Sidebar - Theme Aware */}
-                    <div className="w-52 bg-gray-50 dark:bg-[#2b2d31] flex flex-col flex-shrink-0 border-r border-gray-200 dark:border-[#1e1f22]">
+                    <div className="w-56 bg-gray-100 dark:bg-[#2b2d31] flex flex-col flex-shrink-0 border-r border-gray-200 dark:border-[#1e1f22]">
                         {/* User Header */}
-                        <div className="p-4 border-b border-[#1e1f22]">
+                        <div className="p-4 border-b border-gray-200 dark:border-[#1e1f22]">
                             <div className="flex items-center gap-3">
                                 {avatar ? (
                                     <img src={avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -309,47 +334,49 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-semibold text-white truncate flex items-center gap-1">
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1">
                                         {displayName || username || 'User'}
                                         {user?.role === 'ADMIN' && (
                                             <Crown className="w-3.5 h-3.5 text-yellow-500" />
                                         )}
                                     </div>
-                                    <div className="text-xs text-gray-400 truncate">Edit Profile</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">Edit Profile</div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Menu */}
-                        <div className="flex-1 p-2 overflow-y-auto">
-                            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide px-2 py-2">
+                        {/* Menu - More Spacing */}
+                        <div className="flex-1 p-3 overflow-y-auto">
+                            <div className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-3 py-3 mb-1">
                                 User Settings
                             </div>
-                            {menuItems.map(item => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setActiveSection(item.id)}
-                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${activeSection === item.id
-                                        ? 'bg-[#404249] text-white'
-                                        : 'text-gray-400 hover:text-gray-200 hover:bg-[#35373c]'
-                                        }`}
-                                >
-                                    <item.icon className="w-4 h-4" />
-                                    {item.label}
-                                    {item.id === 'admin' && (
-                                        <span className="ml-auto px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-[10px] font-bold rounded">
-                                            ADMIN
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                            <div className="space-y-1">
+                                {menuItems.map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveSection(item.id)}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeSection === item.id
+                                            ? 'bg-blue-100 dark:bg-[#404249] text-blue-700 dark:text-white'
+                                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#35373c]'
+                                            }`}
+                                    >
+                                        <item.icon className="w-4 h-4" />
+                                        {item.label}
+                                        {item.id === 'admin' && (
+                                            <span className="ml-auto px-1.5 py-0.5 bg-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] font-bold rounded">
+                                                ADMIN
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Logout */}
-                        <div className="p-2 border-t border-[#1e1f22]">
+                        {/* Close Settings - Bottom */}
+                        <div className="p-3 border-t border-gray-200 dark:border-[#1e1f22]">
                             <button
                                 onClick={onClose}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-[#35373c] rounded transition-colors"
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#35373c] rounded-lg transition-colors"
                             >
                                 <X className="w-4 h-4" />
                                 Close Settings
@@ -597,8 +624,8 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                         </div>
 
                                         {/* Custom Status */}
-                                        <div className="bg-[#1e1f22] rounded-lg p-4 space-y-4">
-                                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                        <div className="bg-gray-100 dark:bg-[#1e1f22] rounded-lg p-4 space-y-4">
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                                 <Smile className="w-4 h-4" />
                                                 Custom Status
                                             </h3>
@@ -607,24 +634,40 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                                 <div className="relative">
                                                     <button
                                                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                                        className="w-10 h-10 flex items-center justify-center bg-[#2b2d31] rounded text-xl hover:bg-[#35373c] transition"
+                                                        className="w-10 h-10 flex items-center justify-center bg-gray-200 dark:bg-[#2b2d31] rounded text-xl hover:bg-gray-300 dark:hover:bg-[#35373c] transition"
                                                     >
                                                         {statusEmoji || '😀'}
                                                     </button>
                                                     {showEmojiPicker && (
-                                                        <div className="absolute top-12 left-0 z-10 p-2 bg-[#2b2d31] border border-gray-700 rounded-lg shadow-xl grid grid-cols-5 gap-1">
-                                                            {POPULAR_EMOJIS.map(emoji => (
-                                                                <button
-                                                                    key={emoji}
-                                                                    onClick={() => {
-                                                                        setStatusEmoji(emoji);
-                                                                        setShowEmojiPicker(false);
-                                                                    }}
-                                                                    className="text-xl p-1 hover:bg-[#35373c] rounded"
-                                                                >
-                                                                    {emoji}
-                                                                </button>
-                                                            ))}
+                                                        <div className="absolute top-12 left-0 z-20 w-72 p-3 bg-white dark:bg-[#2b2d31] border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl">
+                                                            {/* Search */}
+                                                            <input
+                                                                type="text"
+                                                                value={emojiSearch}
+                                                                onChange={(e) => setEmojiSearch(e.target.value)}
+                                                                className="w-full bg-gray-100 dark:bg-[#1e1f22] border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 mb-2"
+                                                                placeholder="Search emoji..."
+                                                                autoFocus
+                                                            />
+                                                            {/* Emoji Grid */}
+                                                            <div className="max-h-48 overflow-y-auto grid grid-cols-8 gap-1">
+                                                                {filteredEmojis.map((emoji, i) => (
+                                                                    <button
+                                                                        key={`${emoji}-${i}`}
+                                                                        onClick={() => {
+                                                                            setStatusEmoji(emoji);
+                                                                            setShowEmojiPicker(false);
+                                                                            setEmojiSearch('');
+                                                                        }}
+                                                                        className="text-xl p-1.5 hover:bg-gray-100 dark:hover:bg-[#35373c] rounded"
+                                                                    >
+                                                                        {emoji}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            {filteredEmojis.length === 0 && (
+                                                                <p className="text-sm text-gray-500 text-center py-4">No emoji found</p>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -645,7 +688,7 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                                         onClick={() => setStatusDuration(dur as any)}
                                                         className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition ${statusDuration === dur
                                                             ? 'bg-blue-600 text-white'
-                                                            : 'bg-[#2b2d31] text-gray-400 hover:text-white'
+                                                            : 'bg-gray-200 dark:bg-[#2b2d31] text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                                             }`}
                                                     >
                                                         {dur === '1day' ? '1 Day' : dur === '1week' ? '1 Week' : 'Never'}
@@ -653,26 +696,25 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                                 ))}
                                             </div>
                                         </div>
-                                    </div>
-                                )}
 
-                                {/* Chat Background Section */}
-                                {activeSection === 'chat-background' && (
-                                    <div className="space-y-6">
-                                        <h2 className="text-xl font-bold text-white mb-6">Chat Background</h2>
+                                        {/* Chat Background - Moved from separate tab */}
+                                        <div className="bg-gray-100 dark:bg-[#1e1f22] rounded-lg p-4 space-y-4">
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <ImageIcon className="w-4 h-4" />
+                                                Chat Background
+                                            </h3>
 
-                                        <div className="bg-[#1e1f22] rounded-lg p-4 space-y-4">
                                             {/* Preview */}
-                                            <div className="relative h-48 rounded-lg overflow-hidden bg-[#2b2d31]">
+                                            <div className="relative h-40 rounded-lg overflow-hidden bg-gray-200 dark:bg-[#2b2d31]">
                                                 {chatBackground ? (
                                                     <img src={chatBackground} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
                                                         <ImageIcon className="w-12 h-12" />
                                                     </div>
                                                 )}
                                                 <div
-                                                    className="absolute inset-0 bg-[#313338]"
+                                                    className="absolute inset-0 bg-white dark:bg-[#313338]"
                                                     style={{ opacity: 1 - bgOpacity }}
                                                 />
                                                 <label className="absolute top-2 right-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-xs font-medium cursor-pointer flex items-center gap-1.5 transition">
@@ -689,9 +731,9 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
 
                                             {/* Opacity Slider */}
                                             <div>
-                                                <div className="flex justify-between text-xs text-gray-400 mb-2">
+                                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
                                                     <span>Background Opacity</span>
-                                                    <span className="text-blue-400">{Math.round(bgOpacity * 100)}%</span>
+                                                    <span className="text-blue-500">{Math.round(bgOpacity * 100)}%</span>
                                                 </div>
                                                 <input
                                                     type="range"
@@ -700,18 +742,42 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                                                     step="0.01"
                                                     value={bgOpacity}
                                                     onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                                                    className="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                                    className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
                                                 />
                                             </div>
 
                                             {chatBackground && (
                                                 <button
                                                     onClick={() => setChatBackground('')}
-                                                    className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded text-xs font-medium hover:bg-red-500/30 transition"
+                                                    className="px-3 py-1.5 bg-red-500/20 text-red-500 dark:text-red-400 rounded text-xs font-medium hover:bg-red-500/30 transition"
                                                 >
                                                     Remove Background
                                                 </button>
                                             )}
+                                        </div>
+
+                                        {/* Sidebar Transparency */}
+                                        <div className="bg-gray-100 dark:bg-[#1e1f22] rounded-lg p-4 space-y-4">
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Settings className="w-4 h-4" />
+                                                Sidebar Transparency
+                                            </h3>
+
+                                            <div>
+                                                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                    <span>Sidebar Opacity</span>
+                                                    <span className="text-blue-500">{Math.round(sidebarOpacity * 100)}%</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="0.3"
+                                                    max="1"
+                                                    step="0.01"
+                                                    value={sidebarOpacity}
+                                                    onChange={(e) => setSidebarOpacity(parseFloat(e.target.value))}
+                                                    className="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -728,29 +794,25 @@ export default function UserSettings({ isOpen, onClose, onUpdate }: UserSettings
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="p-4 border-t border-[#1e1f22] bg-[#2b2d31]">
-                            <div className="max-w-2xl flex items-center justify-between">
-                                <div>
-                                    {error && <p className="text-sm text-red-400">{error}</p>}
-                                    {success && <p className="text-sm text-green-400">{success}</p>}
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={onClose}
-                                        className="px-4 py-2 text-sm text-gray-400 hover:text-white transition"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={loading}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                        {loading ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
+                        {/* Footer - Theme Aware */}
+                        <div className="p-4 border-t border-gray-200 dark:border-[#1e1f22] bg-gray-50 dark:bg-[#2b2d31]">
+                            <div className="max-w-2xl flex items-center justify-end gap-4">
+                                {error && <p className="text-sm text-red-500 dark:text-red-400 mr-auto">{error}</p>}
+                                {success && <p className="text-sm text-green-500 dark:text-green-400 mr-auto">{success}</p>}
+                                <button
+                                    onClick={onClose}
+                                    className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {loading ? 'Saving...' : 'Save Changes'}
+                                </button>
                             </div>
                         </div>
                     </div>

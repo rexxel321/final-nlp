@@ -30,7 +30,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSessionSelect, onNewChat, selectedModel, setSelectedModel, availableModels, refreshTrigger, onCollapsedChange }: SidebarProps) {
-  const { user, logout, updateStatus } = useAuth();
+  const { user, logout, updateStatus, theme } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -39,6 +39,14 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const sidebarOpacity = user?.sidebarOpacity ?? 1.0;
+
+  const getSidebarBg = () => {
+    if (theme === 'oled') return `rgba(0, 0, 0, ${sidebarOpacity})`;
+    if (theme === 'dark') return `rgba(17, 24, 39, ${sidebarOpacity})`; // gray-900
+    return `rgba(249, 249, 249, ${sidebarOpacity})`;
+  };
   /* Removed duplicate isCollapsed */
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showUserHover, setShowUserHover] = useState(false);
@@ -172,7 +180,8 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
             animate={{ x: 0, width: isCollapsed ? 64 : 256 }}
             exit={{ x: -300 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="fixed inset-y-0 left-0 bg-[#f9f9f9] dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-40 flex flex-col overflow-hidden shadow-none"
+            style={{ backgroundColor: getSidebarBg() }}
+            className="fixed inset-y-0 left-0 border-r border-gray-200 dark:border-gray-800 z-40 flex flex-col overflow-hidden shadow-none backdrop-blur-sm"
           >
             {/* Header */}
             <div className="p-4 flex items-center justify-between flex-shrink-0">

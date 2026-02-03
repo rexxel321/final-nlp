@@ -33,6 +33,7 @@ export async function GET() {
                 statusExpiresAt: true,
                 backgroundImage: true,
                 backgroundOpacity: true,
+                sidebarOpacity: true,
                 status: true,
                 role: true,
                 createdAt: true
@@ -85,6 +86,7 @@ export async function PATCH(req: Request) {
             statusDuration, // "1day", "1week", "never"
             backgroundImage,
             backgroundOpacity,
+            sidebarOpacity,
             oldPassword,
             newPassword
         } = body;

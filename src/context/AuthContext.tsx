@@ -17,6 +17,7 @@ interface User {
     banner?: string;
     backgroundImage?: string;
     backgroundOpacity?: number;
+    sidebarOpacity?: number;
     createdAt?: string;
 }
 

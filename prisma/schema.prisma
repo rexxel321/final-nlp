@@ -48,6 +48,7 @@ model User {
   // Chat background
   backgroundImage   String?     @db.LongText // URL to chat background (Base64)
   backgroundOpacity Float       @default(0.3) // Opacity (0-1)
+  sidebarOpacity    Float       @default(1.0) // Sidebar transparency (0.3-1)
   
   // Relations
   sessions          Session[]

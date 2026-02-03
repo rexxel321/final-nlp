@@ -40,3 +40,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* OLED True Black Theme - Energy Saving */
+.oled {
+  --background: #000000;
+  --foreground: #ededed;
+}
+
+.oled body,
+.oled .bg-gray-900,
+.oled .dark\:bg-gray-900,
+.oled .dark\:bg-\[\#313338\],
+.oled .dark\:bg-\[\#2b2d31\],
+.oled .dark\:bg-\[\#1e1f22\] {
+  background-color: #000000 !important;
+}
+
+/* OLED sidebar and modal backgrounds */
+.oled .dark\:bg-gray-800 {
+  background-color: #0a0a0a !important;
+}
+
+.oled .dark\:border-gray-700,
+.oled .dark\:border-\[\#1e1f22\] {
+  border-color: #1a1a1a !important;
+}
