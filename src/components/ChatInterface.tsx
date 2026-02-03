@@ -99,6 +99,8 @@ const ChatInterface = ({
                 }}
             />
 
+
+
             {/* Scrollable Chat Area - Full Width */}
             <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
                 <div className="w-full max-w-4xl mx-auto px-4 md:px-8 py-10 pb-32">
@@ -337,13 +339,23 @@ const ChatInterface = ({
                 <div className="max-w-3xl mx-auto relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-5 group-hover:opacity-10 transition-opacity"></div>
                     <div className="relative bg-[#F0F4F9] dark:bg-gray-800 rounded-full flex items-center shadow-inner hover:shadow-md transition-all duration-300 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 focus-within:bg-white dark:focus-within:bg-gray-800">
+                        {/* Summarize Button (Left) */}
+                        {messages.length > 0 && onSummarize && (
+                            <button
+                                onClick={onSummarize}
+                                className="ml-2 p-2 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-full transition-all"
+                                title="Summarize conversation"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                            </button>
+                        )}
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Ask me anything..."
-                            className="w-full bg-transparent text-gray-800 dark:text-gray-100 rounded-full py-4 pl-6 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
+                            className="w-full bg-transparent text-gray-800 dark:text-gray-100 rounded-full py-4 pl-3 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
                             disabled={isLoading}
                         />
                         <button
