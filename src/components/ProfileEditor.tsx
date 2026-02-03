@@ -240,8 +240,8 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                 <button
                                     onClick={() => setActiveTab('status')}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === 'status'
-                                        ? 'bg-blue-50 text-blue-700 font-semibold'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     Custom Status
@@ -249,8 +249,8 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                 <button
                                     onClick={() => setActiveTab('security')}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === 'security'
-                                        ? 'bg-blue-50 text-blue-700 font-semibold'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     Password & Security
@@ -258,8 +258,8 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                 <button
                                     onClick={() => setActiveTab('appearance')}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === 'appearance'
-                                        ? 'bg-blue-50 text-blue-700 font-semibold'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     Chat Background

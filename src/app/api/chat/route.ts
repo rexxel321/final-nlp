@@ -287,7 +287,14 @@ export async function POST(req: Request) {
                             data: {
                                 content: responseContent,
                                 model: model,
-                                versions: [...currentVersions, oldVersion]
+                                versions: [...currentVersions, oldVersion],
+                                // Save metrics to database
+                                latencyMs: metricsObj.latencyMs,
+                                tokensPerSec: metricsObj.tokensPerSec,
+                                totalTokens: metricsObj.totalTokens,
+                                promptTokens: metricsObj.promptTokens,
+                                completionTokens: metricsObj.completionTokens,
+                                f1Score: metricsObj.f1Score
                             }
                         });
                     }
@@ -298,7 +305,13 @@ export async function POST(req: Request) {
                             role: 'assistant',
                             sessionId,
                             model: model,
-                            // Store metrics in metadata if schema supported it, for now we pass it back to frontend
+                            // Save metrics to database
+                            latencyMs: metricsObj.latencyMs,
+                            tokensPerSec: metricsObj.tokensPerSec,
+                            totalTokens: metricsObj.totalTokens,
+                            promptTokens: metricsObj.promptTokens,
+                            completionTokens: metricsObj.completionTokens,
+                            f1Score: metricsObj.f1Score
                         }
                     });
                 }

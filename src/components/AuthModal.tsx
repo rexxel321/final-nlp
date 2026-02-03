@@ -57,7 +57,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setIsLoading(true);
 
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-        const body = isLogin ? { email, password } : { email, password, name };
+        const body = isLogin ? { email, password } : { email, password, name, username: name };
 
         try {
             const res = await fetch(endpoint, {
@@ -116,15 +116,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {!isLogin && (
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Display Name</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
                                 <input
                                     type="text"
                                     required
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
-                                    placeholder="Your Name"
+                                    placeholder="Choose a username"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">This will be your unique login identifier</p>
                             </div>
                         )}
                         <div>
@@ -132,14 +133,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 {isLogin ? "Email or Username" : "Email Address"}
                             </label>
                             <input
-                                type="email"
+                                type={isLogin ? "text" : "email"}
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 pattern={isLogin ? undefined : "[^@\\s]+@[^@\\s]+\\.[^@\\s]+"}
-                                title="Please enter a valid email address"
+                                title={isLogin ? undefined : "Please enter a valid email address"}
                                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
-                                placeholder={isLogin ? "username or email" : "you@example.com"}
+                                placeholder={isLogin ? "Username or email" : "you@example.com"}
                             />
                         </div>
                         <div>

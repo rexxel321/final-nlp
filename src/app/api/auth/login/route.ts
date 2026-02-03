@@ -37,7 +37,24 @@ export async function POST(req: Request) {
             path: '/'
         });
 
-        return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, status: user.status } });
+        return NextResponse.json({
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                displayName: user.displayName,
+                username: user.username,
+                role: user.role,
+                status: user.status,
+                avatar: user.avatar,
+                banner: user.banner,
+                bio: user.bio,
+                pronouns: user.pronouns,
+                backgroundImage: user.backgroundImage,
+                backgroundOpacity: user.backgroundOpacity,
+                createdAt: user.createdAt
+            }
+        });
 
     } catch (error) {
         return NextResponse.json({ error: 'Login failed' }, { status: 500 });

@@ -120,7 +120,7 @@ const ChatInterface = ({
 
 
             {/* Scrollable Chat Area - Full Width */}
-            <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+            <div className="flex-1 overflow-y-auto w-full custom-scrollbar relative z-20">
                 <div className="w-full max-w-4xl mx-auto px-4 md:px-8 py-10 pb-32">
 
                     {/* Welcome Screen */}
@@ -187,71 +187,74 @@ const ChatInterface = ({
                                     animate={{ opacity: 1, y: 0 }}
                                     className={`group flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                                 >
-                                    <div className={`
-                                        group relative px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[85%] shadow-sm transition-all
-                                        ${isUser
-                                            ? 'bg-[#E8F0FE] dark:bg-blue-900/30 text-gray-800 dark:text-gray-100 rounded-br-sm border border-transparent dark:border-blue-800'
-                                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm border border-gray-100 dark:border-gray-700'
-                                        }
-                                    `}>
-                                        {/* Model Badge + Timestamp for AI */}
-                                        {!isUser && (
-                                            <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100 dark:border-gray-700">
-                                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                                    <Bot className="w-3 h-3" />
-                                                    {displayedModel}
-                                                </span>
-                                                {msg.createdAt && (
-                                                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
-                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Version Navigator */}
-                                        {totalVersions > 1 && (
-                                            <div className={`flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 ml-2 ${isUser ? 'mr-auto' : 'ml-auto'}`}>
-                                                <button
-                                                    onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.max(0, currentVersionIndex - 1) }))}
-                                                    disabled={currentVersionIndex === 0}
-                                                    className="hover:text-gray-900 disabled:opacity-30 px-1"
-                                                >
-                                                    &lt;
-                                                </button>
-                                                <span>{currentVersionIndex + 1}/{totalVersions}</span>
-                                                <button
-                                                    onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.min(totalVersions - 1, currentVersionIndex + 1) }))}
-                                                    disabled={currentVersionIndex === totalVersions - 1}
-                                                    className="hover:text-gray-900 disabled:opacity-30 px-1"
-                                                >
-                                                    &gt;
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Bubble / Input */}
+                                    {/* Single Consolidated Bubble */}
                                     {editingIndex === index ? (
-                                        <div className="w-full max-w-3xl bg-white border border-blue-200 rounded-xl p-4 shadow-lg z-10">
+                                        <div className="w-full max-w-3xl bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-xl p-4 shadow-lg z-10">
                                             <textarea
                                                 value={editValue}
                                                 onChange={(e) => setEditValue(e.target.value)}
-                                                className="w-full min-h-[100px] p-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium leading-relaxed"
-                                                style={{ color: '#111827' }} // Explicit hex for safety
+                                                className="w-full min-h-[100px] p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium leading-relaxed"
                                             />
                                             <div className="flex justify-end gap-2 mt-2">
-                                                <button onClick={() => setEditingIndex(null)} className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+                                                <button onClick={() => setEditingIndex(null)} className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
                                                 <button onClick={() => saveEdit(index)} className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all hover:scale-105 active:scale-95">Save & Regenerate</button>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="relative max-w-[85%] md:max-w-[75%] group">
-                                            <div className={`rounded-2xl px-6 py-5 shadow-sm leading-relaxed text-[15px] ${isUser
-                                                ? 'bg-black text-white rounded-br-sm'
-                                                : 'bg-[#F0F4F9] text-gray-800 rounded-bl-sm'
+                                            {/* Unified Message Bubble */}
+                                            <div className={`rounded-2xl px-5 py-4 shadow-sm ${isUser
+                                                ? 'bg-black dark:bg-blue-900/50 text-white rounded-br-sm'
+                                                : 'bg-[#F0F4F9] dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm border border-gray-100 dark:border-gray-700'
                                                 }`}>
-                                                <p className="whitespace-pre-wrap">{displayedContent}</p>
+                                                {/* Header: Name + Timestamp */}
+                                                <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200/30 dark:border-gray-600/50">
+                                                    <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isUser ? 'text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                        {isUser ? (
+                                                            <>
+                                                                <User className="w-3 h-3" />
+                                                                {user?.displayName || user?.name || 'You'}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Bot className="w-3 h-3" />
+                                                                {displayedModel || 'FitBuddy'}
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                    {msg.createdAt && (
+                                                        <span className={`text-[10px] font-medium ${isUser ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Message Content */}
+                                                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{displayedContent}</p>
+
+                                                {/* Version Navigator (if multiple versions) */}
+                                                {totalVersions > 1 && (
+                                                    <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-gray-200/30 dark:border-gray-600/50">
+                                                        <span className={`text-[10px] ${isUser ? 'text-gray-400' : 'text-gray-400'}`}>Version:</span>
+                                                        <div className="flex items-center gap-1 text-[10px] bg-gray-200/50 dark:bg-gray-700/50 rounded-full px-2 py-0.5">
+                                                            <button
+                                                                onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.max(0, currentVersionIndex - 1) }))}
+                                                                disabled={currentVersionIndex === 0}
+                                                                className={`hover:opacity-100 disabled:opacity-30 px-1 ${isUser ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'}`}
+                                                            >
+                                                                &lt;
+                                                            </button>
+                                                            <span className={isUser ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'}>{currentVersionIndex + 1}/{totalVersions}</span>
+                                                            <button
+                                                                onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.min(totalVersions - 1, currentVersionIndex + 1) }))}
+                                                                disabled={currentVersionIndex === totalVersions - 1}
+                                                                className={`hover:opacity-100 disabled:opacity-30 px-1 ${isUser ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'}`}
+                                                            >
+                                                                &gt;
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Action Buttons Container */}
@@ -418,23 +421,25 @@ const ChatInterface = ({
                 <div className="max-w-3xl mx-auto relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-5 group-hover:opacity-10 transition-opacity"></div>
                     <div className="relative bg-[#F0F4F9] dark:bg-gray-800 rounded-full flex items-center shadow-inner hover:shadow-md transition-all duration-300 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 focus-within:bg-white dark:focus-within:bg-gray-800">
-                        {/* Summarize Button (Left) */}
-                        {messages.length > 0 && onSummarize && (
-                            <button
-                                onClick={onSummarize}
-                                className="ml-2 p-2 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-full transition-all"
-                                title="Summarize conversation"
-                            >
-                                <Sparkles className="w-4 h-4" />
-                            </button>
-                        )}
+                        {/* Summarize Button (Left) - always takes space for consistent layout */}
+                        <div className="ml-2 w-8 h-8 flex items-center justify-center flex-shrink-0">
+                            {messages.length > 0 && onSummarize ? (
+                                <button
+                                    onClick={onSummarize}
+                                    className="p-2 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-full transition-all"
+                                    title="Summarize conversation"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                </button>
+                            ) : null}
+                        </div>
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Ask me anything..."
-                            className="w-full bg-transparent text-gray-800 dark:text-gray-100 rounded-full py-4 pl-3 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
+                            className="w-full bg-transparent text-gray-800 dark:text-gray-100 rounded-full py-4 pl-1 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
                             disabled={isLoading}
                         />
                         <button

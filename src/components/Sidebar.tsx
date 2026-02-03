@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils';
 import ModelManager from './ModelManager';
 import { useAuth } from '@/context/AuthContext';
 import AuthModal from './AuthModal';
-import ProfileEditor from './ProfileEditor';
+import UserSettings from './UserSettings';
 import UserHoverCard from './UserHoverCard';
-import AdminPanel from './AdminPanel';
 
 interface Session {
   id: string;
@@ -27,9 +26,10 @@ interface SidebarProps {
   setSelectedModel?: (model: string) => void;
   availableModels?: string[];
   refreshTrigger?: number;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSessionSelect, onNewChat, selectedModel, setSelectedModel, availableModels, refreshTrigger }: SidebarProps) {
+export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSessionSelect, onNewChat, selectedModel, setSelectedModel, availableModels, refreshTrigger, onCollapsedChange }: SidebarProps) {
   const { user, logout, updateStatus } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,6 +52,29 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
 
   const handleMouseLeave = () => {
     hoverTimeout.current = setTimeout(() => setShowUserHover(false), 300);
+  };
+
+  // Format relative time for sessions
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffWeeks === 1) return '1 week ago';
+    if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+    if (diffMonths === 1) return '1 month ago';
+    if (diffMonths < 12) return `${diffMonths} months ago`;
+    return date.toLocaleDateString();
   };
 
   // Fetch sessions
@@ -113,10 +136,23 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
     }
   };
 
+  // Handle collapse and notify parent
+  const handleToggleCollapse = () => {
+    const newCollapsed = !isCollapsed;
+    setIsCollapsed(newCollapsed);
+    onCollapsedChange?.(newCollapsed);
+  };
+
+  // Handle logout with confirmation
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      logout();
+    }
+  };
+
   return (
     <>
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} />
 
       {/* Toggle Button (when fully closed) */}
       {!isOpen && (
@@ -144,7 +180,7 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
                 <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest whitespace-nowrap">Chat History</span>
               )}
               <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
+                onClick={handleToggleCollapse}
                 className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors ml-auto flex-shrink-0"
                 title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               >
@@ -195,7 +231,10 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="truncate w-32">{session.title}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="truncate block">{session.title}</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">{getRelativeTime(session.updatedAt)}</span>
+                          </div>
                         )}
 
                         {/* Actions (Hover) */}
@@ -271,29 +310,14 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
               <button
                 onClick={() => setShowModelManager(!showModelManager)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 hover:bg-gray-50 transition-colors",
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors",
                   isCollapsed && "justify-center"
                 )}
                 title="Model Settings"
               >
-                <Settings className="w-4 h-4 flex-shrink-0 text-gray-600" />
-                {!isCollapsed && <span className="whitespace-nowrap text-gray-700">Model Settings</span>}
+                <Settings className="w-4 h-4 flex-shrink-0 text-gray-600 dark:text-gray-400" />
+                {!isCollapsed && <span className="whitespace-nowrap text-gray-700 dark:text-gray-300">Model Settings</span>}
               </button>
-
-              {/* Admin Panel Button */}
-              {user?.role === 'ADMIN' && (
-                <button
-                  onClick={() => setShowAdminPanel(true)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors",
-                    isCollapsed && "justify-center"
-                  )}
-                  title="Admin Panel"
-                >
-                  <Shield className="w-4 h-4 flex-shrink-0" />
-                  {!isCollapsed && <span className="whitespace-nowrap font-bold">Admin Panel</span>}
-                </button>
-              )}
 
               {/* User Profile / Auth */}
               {user ? (
@@ -325,10 +349,10 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
                     )}
                     {!isCollapsed && (
                       <div className="flex-1 text-left overflow-hidden min-w-0">
-                        <div className="text-xs font-semibold text-gray-800 truncate">
-                          {user.name || 'User'}
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">
+                          {user.displayName || user.name || 'User'}
                         </div>
-                        <div className="text-[10px] text-gray-500 truncate">
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                           {user.email}
                         </div>
                       </div>
@@ -337,9 +361,9 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
 
                   {/* Logout Button - ALWAYS VISIBLE (icon in collapsed) */}
                   <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors",
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors",
                       isCollapsed && "justify-center"
                     )}
                     title="Logout"
@@ -373,8 +397,8 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
         availableModels={availableModels || []}
       />
 
-      {/* Profile Editor Modal */}
-      <ProfileEditor
+      {/* User Settings Modal (Discord-style) */}
+      <UserSettings
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         onUpdate={() => fetchSessions()}

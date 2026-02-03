@@ -24,6 +24,7 @@ export default function Home() {
 
   // New State Variables
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Trigger for Sidebar refresh
@@ -421,7 +422,19 @@ export default function Home() {
               const res = await fetch(`/api/history?sessionId=${id}`);
               if (res.ok) {
                 const data = await res.json();
-                setMessages(data.messages || []);
+                // Map flat DB fields to nested metrics object
+                const mappedMessages = (data.messages || []).map((msg: any) => ({
+                  ...msg,
+                  metrics: msg.latencyMs ? {
+                    latencyMs: msg.latencyMs,
+                    tokensPerSec: msg.tokensPerSec,
+                    totalTokens: msg.totalTokens,
+                    promptTokens: msg.promptTokens,
+                    completionTokens: msg.completionTokens,
+                    f1Score: msg.f1Score
+                  } : undefined
+                }));
+                setMessages(mappedMessages);
                 setFollowUps([]);
               }
             } catch (e) { console.error(e); }
@@ -431,6 +444,7 @@ export default function Home() {
         }}
         availableModels={availableModels}
         refreshTrigger={refreshTrigger}
+        onCollapsedChange={setIsSidebarCollapsed}
       />
 
       {/* Main Content Area */}
@@ -438,7 +452,7 @@ export default function Home() {
         layout
         className={cn(
           "flex-1 flex flex-col h-full relative transition-all duration-300 ease-in-out",
-          isSidebarOpen ? "md:ml-64" : "ml-0"
+          isSidebarOpen ? (isSidebarCollapsed ? "md:ml-16" : "md:ml-64") : "ml-0"
         )}
       >
         {/* Header with Model Selector */}
@@ -451,22 +465,27 @@ export default function Home() {
         </div>
 
         {/* Background Container */}
-        <div
-          className="flex-1 flex flex-col overflow-hidden"
-          style={{
-            backgroundImage: user?.backgroundImage ? `url(${user.backgroundImage})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        >
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Background Image Layer - z-0 (behind everything) */}
           {user?.backgroundImage && (
-            <div
-              className="absolute inset-0 bg-white z-0 pointer-events-none"
-              style={{ opacity: 1 - (user.backgroundOpacity || 0.3) }}
-            />
+            <>
+              <div
+                className="absolute inset-0 z-0 pointer-events-none"
+                style={{
+                  backgroundImage: `url(${user.backgroundImage})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                }}
+              />
+              <div
+                className="absolute inset-0 bg-white dark:bg-gray-900 z-[1] pointer-events-none"
+                style={{ opacity: 1 - (user.backgroundOpacity || 0.3) }}
+              />
+            </>
           )}
 
+          {/* Content Layer - z-10 (above background) */}
           <div className="relative z-10 h-full flex flex-col">
             <ChatInterface
               messages={messages}

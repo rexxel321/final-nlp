@@ -17,6 +17,7 @@ export async function GET() {
                 id: true,
                 email: true,
                 name: true,
+                displayName: true,
                 status: true,
                 username: true,
                 role: true,
@@ -25,6 +26,7 @@ export async function GET() {
                 bio: true,
                 pronouns: true,
                 backgroundImage: true,
+                backgroundOpacity: true,
                 createdAt: true
             }
         });

@@ -81,6 +81,14 @@ model Message {
   model     String?
   versions  Json?    // Store edit history [{role, content, model, createdAt}]
   
+  // Performance metrics (persisted)
+  latencyMs         Int?      // Response latency in milliseconds
+  tokensPerSec      Float?    // Tokens generated per second
+  totalTokens       Int?      // Total tokens used
+  promptTokens      Int?      // Prompt tokens
+  completionTokens  Int?      // Completion tokens generated
+  f1Score           Float?    // F1 score for the response
+  
   @@index([sessionId])
 }
 

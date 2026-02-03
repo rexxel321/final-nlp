@@ -131,7 +131,10 @@ export default function ModelManager({ isOpen, onClose, availableModels }: Model
                 setLoadedSettings(prev => ({ ...prev, ...allChanges }));
                 // Clear changes
                 setAllChanges({});
-                setTimeout(() => setSaveStatus('idle'), 2000);
+                setTimeout(() => {
+                    setSaveStatus('idle');
+                    onClose(); // Close after successful save
+                }, 1500);
             } else {
                 setSaveStatus('error');
                 setTimeout(() => setSaveStatus('idle'), 3000);
@@ -141,6 +144,13 @@ export default function ModelManager({ isOpen, onClose, availableModels }: Model
             setSaveStatus('error');
             setTimeout(() => setSaveStatus('idle'), 3000);
         }
+    };
+
+    const handleCancel = () => {
+        // Clear all unsaved changes before closing
+        setAllChanges({});
+        setShowLoginPrompt(false);
+        onClose();
     };
 
     if (!isOpen) return null;
@@ -359,7 +369,7 @@ export default function ModelManager({ isOpen, onClose, availableModels }: Model
                                     >
                                         DEFAULT
                                     </button>
-                                    <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                                    <button onClick={handleCancel} className="px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
                                         Cancel
                                     </button>
                                     <button
