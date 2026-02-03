@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { generateId } from "@/lib/uuid";
 import { useAuth } from "@/context/AuthContext";
 import { saveGuestSession, loadGuestSession } from "@/lib/guestSession";
+import ModelSelector from "@/components/ModelSelector";
 
 export default function Home() {
   const { user } = useAuth();
@@ -364,13 +365,23 @@ export default function Home() {
         throw new Error("No response from AI");
       }
 
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
         console.log('Request aborted');
         return;
       }
-      console.error('Error sending message:', error);
-      setError(error.message || "Something went wrong. Please try again.");
+      console.error('[Chat] API Error:', err);
+
+      // Better error message extraction
+      let errorMsg = 'Failed to send message.';
+      if (err.message) {
+        errorMsg = err.message;
+      }
+
+      setError(errorMsg);
+
+      // Remove thinking message on error (if any was added optimistically)
+      setMessages(prev => prev.filter(m => m.content !== 'Thinking...'));
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
@@ -418,8 +429,6 @@ export default function Home() {
           loadHistory();
           if (window.innerWidth < 768) setIsSidebarOpen(false); // Close on mobile
         }}
-        selectedModel={selectedModel}
-        setSelectedModel={setSelectedModel}
         availableModels={availableModels}
         refreshTrigger={refreshTrigger}
       />
@@ -431,36 +440,50 @@ export default function Home() {
           "flex-1 flex flex-col h-full relative transition-all duration-300 ease-in-out",
           isSidebarOpen ? "md:ml-64" : "ml-0"
         )}
-        style={{
-          backgroundImage: user?.backgroundImage ? `url(${user.backgroundImage})` : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
       >
-        {user?.backgroundImage && (
-          <div
-            className="absolute inset-0 bg-white z-0 pointer-events-none"
-            style={{ opacity: 1 - (user.backgroundOpacity || 0.3) }}
+        {/* Header with Model Selector */}
+        <div className="absolute top-4 left-6 z-30 flex items-center gap-3">
+          <ModelSelector
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            availableModels={availableModels}
           />
-        )}
+        </div>
 
-        <div className="relative z-10 h-full flex flex-col">
-          <ChatInterface
-            messages={messages}
-            inputValue={inputValue}
-            setInputValue={setInputValue}
-            isLoading={isLoading}
-            onSendMessage={(msg) => handleSendMessage(msg)}
-            onSummarize={handleSummarize}
-            suggestions={suggestions}
-            followUps={followUps}
-            onEditMessage={handleEditMessage}
-            onDeleteMessage={handleDeleteMessage}
-            onStopGeneration={handleStopGeneration}
-            onRegenerate={handleRegenerate}
-            error={error}
-          />
+        {/* Background Container */}
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{
+            backgroundImage: user?.backgroundImage ? `url(${user.backgroundImage})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        >
+          {user?.backgroundImage && (
+            <div
+              className="absolute inset-0 bg-white z-0 pointer-events-none"
+              style={{ opacity: 1 - (user.backgroundOpacity || 0.3) }}
+            />
+          )}
+
+          <div className="relative z-10 h-full flex flex-col">
+            <ChatInterface
+              messages={messages}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              isLoading={isLoading}
+              onSendMessage={(msg) => handleSendMessage(msg)}
+              onSummarize={handleSummarize}
+              suggestions={suggestions}
+              followUps={followUps}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onStopGeneration={handleStopGeneration}
+              onRegenerate={handleRegenerate}
+              error={error}
+            />
+          </div>
         </div>
       </motion.div>
     </div>

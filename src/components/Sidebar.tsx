@@ -23,9 +23,9 @@ interface SidebarProps {
   currentSessionId: string;
   onSessionSelect: (id: string) => void;
   onNewChat: () => void;
-  selectedModel: string;
-  setSelectedModel: (model: string) => void;
-  availableModels: string[];
+  selectedModel?: string;
+  setSelectedModel?: (model: string) => void;
+  availableModels?: string[];
   refreshTrigger?: number;
 }
 
@@ -220,12 +220,13 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
 
             {/* Bottom Section */}
             <div className={cn("border-t border-gray-200 p-4 space-y-2 flex-shrink-0", isCollapsed && "px-2")}>
-              {/* Model Selector Dropdown */}
-              {!isCollapsed && (
-                <div className="relative">
+              {/* Model Selector - Only show if props are provided */}
+              {selectedModel && setSelectedModel && availableModels && (
+                <div className="p-3">
+                  <label className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-2">Model</label>
                   <button
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                   >
                     <span className="truncate">{selectedModel}</span>
                     <ChevronDown className="w-3 h-3 flex-shrink-0" />
@@ -369,7 +370,7 @@ export default function Sidebar({ isOpen, setIsOpen, currentSessionId, onSession
       <ModelManager
         isOpen={showModelManager}
         onClose={() => setShowModelManager(false)}
-        availableModels={availableModels}
+        availableModels={availableModels || []}
       />
 
       {/* Profile Editor Modal */}

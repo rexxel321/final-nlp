@@ -209,14 +209,15 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl"
+                    className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                        <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h2>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -225,13 +226,13 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                     {/* Main Content */}
                     <div className="flex h-[calc(90vh-140px)]">
                         {/* Sidebar */}
-                        <div className="w-56 bg-gray-50 p-4 overflow-y-auto border-r border-gray-200">
+                        <div className="w-56 bg-gray-50 dark:bg-gray-800 p-4 overflow-y-auto border-r border-gray-200 dark:border-gray-700">
                             <div className="space-y-1">
                                 <button
                                     onClick={() => setActiveTab('profile')}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeTab === 'profile'
-                                        ? 'bg-blue-50 text-blue-700 font-semibold'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold'
+                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                         }`}
                                 >
                                     My Profile
@@ -272,11 +273,11 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                             {activeTab === 'profile' && (
                                 <div className="space-y-6">
                                     <div>
-                                        <h3 className="text-xl font-bold text-gray-900 mb-6">My Profile</h3>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">My Profile</h3>
 
                                         {/* Banner */}
                                         <div className="mb-6">
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Profile Banner</label>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Profile Banner</label>
                                             <div className="relative w-full h-32 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl overflow-hidden">
                                                 {banner && (
                                                     <img src={banner} alt="Banner" className="w-full h-full object-cover" />
@@ -295,7 +296,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
 
                                         {/* Avatar */}
                                         <div className="mb-6">
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Avatar</label>
+                                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Avatar</label>
                                             <div className="flex items-center gap-4">
                                                 <div className="relative w-24 h-24 bg-gray-200 rounded-full overflow-hidden">
                                                     {avatar ? (
@@ -315,7 +316,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                                         />
                                                     </label>
                                                 </div>
-                                                <div className="text-sm text-gray-600">
+                                                <div className="text-sm text-gray-600 dark:text-gray-400">
                                                     <p>Recommended: 128x128px</p>
                                                     <p>Max size: 8MB</p>
                                                 </div>
@@ -344,7 +345,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                                 className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                                 placeholder="username"
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">Unique identifier for login</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Unique identifier for login</p>
                                         </div>
 
                                         {/* Email */}
@@ -381,7 +382,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                                 placeholder="Tell us about yourself..."
                                                 maxLength={190}
                                             />
-                                            <p className="text-xs text-gray-500 mt-1">{bio.length}/190 characters</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{bio.length}/190 characters</p>
                                         </div>
                                     </div>
                                 </div>
@@ -622,7 +623,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                                 onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
                                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                                             />
-                                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                 <span>Transparent</span>
                                                 <span>Opaque</span>
                                             </div>
@@ -645,7 +646,7 @@ export default function ProfileEditor({ isOpen, onClose, onUpdate }: ProfileEdit
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div>
                                                         <h5 className="text-sm font-semibold text-gray-900">Dark Mode</h5>
-                                                        <p className="text-xs text-gray-500 mt-1">Switch between light and dark themes</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Switch between light and dark themes</p>
                                                     </div>
                                                     <button
                                                         onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}

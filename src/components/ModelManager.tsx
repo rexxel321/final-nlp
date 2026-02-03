@@ -203,31 +203,35 @@ export default function ModelManager({ isOpen, onClose, availableModels }: Model
                                                 <div className="truncate">{m.id}</div>
                                                 {hasChanges && <div className="w-2 h-2 rounded-full bg-amber-500"></div>}
                                             </div>
-                                            <div className="text-[10px] text-gray-400 mt-1">Cloud Provider</div>
+                                            <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Cloud Provider</div>
                                         </button>
                                     );
                                 })}
 
-                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 px-2">Local Models</h3>
-                                {modelList.filter(m => m.category === 'Local').map(m => {
-                                    const hasChanges = allChanges[m.id] !== undefined;
-                                    return (
-                                        <button
-                                            key={m.id}
-                                            onClick={() => setSelectedModel(m.id)}
-                                            className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all ${selectedModel === m.id
-                                                ? 'bg-white shadow-sm ring-1 ring-gray-200 font-semibold text-blue-600'
-                                                : 'text-gray-600 hover:bg-white hover:shadow-sm'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="truncate">{m.id.replace('Ollama: ', '')}</div>
-                                                {hasChanges && <div className="w-2 h-2 rounded-full bg-amber-500"></div>}
-                                            </div>
-                                            <div className="text-[10px] text-gray-400 mt-1">Local Model</div>
-                                        </button>
-                                    );
-                                })}
+                                <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 mt-6 px-2">Local Models</h3>
+                                {availableModels.filter(m => m.startsWith("Ollama:")).length === 0 ? (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 italic px-2">No Ollama models found</p>
+                                ) : (
+                                    availableModels.filter(m => m.startsWith("Ollama:")).map(m => {
+                                        const hasChanges = allChanges[m] !== undefined;
+                                        return (
+                                            <button
+                                                key={m}
+                                                onClick={() => setSelectedModel(m)}
+                                                className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all ${selectedModel === m
+                                                    ? 'bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 font-semibold text-blue-600 dark:text-blue-400'
+                                                    : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="truncate">{m.replace('Ollama: ', '')}</div>
+                                                    {hasChanges && <div className="w-2 h-2 rounded-full bg-amber-500"></div>}
+                                                </div>
+                                                <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Local Model</div>
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
 
                             {/* Settings Form */}
@@ -372,8 +376,9 @@ export default function ModelManager({ isOpen, onClose, availableModels }: Model
                             </div>
                         </div>
                     </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                </div >
+            )
+            }
+        </AnimatePresence >
     );
 }

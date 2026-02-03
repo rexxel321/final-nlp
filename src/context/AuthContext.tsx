@@ -8,6 +8,7 @@ interface User {
     email: string;
     username?: string | null;
     name: string;
+    displayName?: string;
     role: 'USER' | 'ADMIN';
     status: 'ONLINE' | 'DND' | 'IDLE' | 'INVISIBLE' | 'OFFLINE';
     bio?: string;

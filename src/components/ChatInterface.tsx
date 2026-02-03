@@ -61,6 +61,16 @@ const ChatInterface = ({
     const [editValue, setEditValue] = useState("");
     const [versionMap, setVersionMap] = useState<Record<number, number>>({});
 
+    // Debug: Log user data
+    useEffect(() => {
+        console.log('[ChatInterface] User data:', {
+            hasUser: !!user,
+            displayName: user?.displayName,
+            name: user?.name,
+            fullUser: user
+        });
+    }, [user]);
+
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading, followUps, error]);
@@ -120,7 +130,24 @@ const ChatInterface = ({
                             animate={{ opacity: 1, scale: 1 }}
                             className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
                         >
-                            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent mb-2">Hello,</h2>
+                            <h2 className="text-4xl md:text-5xl font-bold mb-2">
+                                <span className="bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent">Hello</span>
+                                {(user?.displayName || user?.name) && (
+                                    <>
+                                        <span className="bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent"> </span>
+                                        <span
+                                            className="inline-block bg-gradient-to-r from-purple-600 via-pink-500 to-blue-500 bg-clip-text text-transparent animate-gradient"
+                                            style={{
+                                                backgroundSize: '200% 200%',
+                                                animation: 'gradient 3s ease infinite'
+                                            }}
+                                        >
+                                            {user.displayName || user.name}
+                                        </span>
+                                    </>
+                                )}
+                                <span className="bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent">,</span>
+                            </h2>
                             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 leading-tight mb-12">
                                 How can I help you today?
                             </h2>
