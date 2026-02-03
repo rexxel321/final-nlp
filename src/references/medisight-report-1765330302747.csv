@@ -1,0 +1,13 @@
+Field,Value
+Age,6
+Gender,Male
+Emotion,"neutral (36%)"
+Date,"12/10/2025, 8:31:42 AM"
+
+Symptom,Status
+Fever,Yes
+Cough,Yes
+Fatigue,No
+Difficulty Breathing,Yes
+Blood Pressure,Normal
+Cholesterol Level,High

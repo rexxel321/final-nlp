@@ -10,12 +10,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Role system: First user = ADMIN, others = USER
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ONLINE
+  DND
+  IDLE
+  INVISIBLE
+  OFFLINE
+}
+
+model User {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  username          String?    @unique  // Optional unique username
+  password          String
+  name              String?     // Display name (can have spaces)
+  role              UserRole    @default(USER)
+  status            UserStatus  @default(ONLINE)
+  
+  // Profile customization
+  displayName       String?     // Rich display name with emojis
+  bio               String?     @db.Text
+  pronouns          String?
+  avatar            String?     @db.LongText // Profile picture URL (Base64)
+  banner            String?     @db.LongText // Banner image URL (Base64)
+  
+  // Status system (Discord-like)
+  statusEmoji       String?     // Emoji for custom status
+  statusText        String?     // Custom status message
+  statusExpiresAt   DateTime?   // When status expires (null = never)
+  
+  // Chat background
+  backgroundImage   String?     @db.LongText // URL to chat background (Base64)
+  backgroundOpacity Float       @default(0.3) // Opacity (0-1)
+  
+  // Relations
+  sessions          Session[]
+  modelSettings     ModelSettings[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([email])
+  @@index([username])
+}
+
 model Session {
   id        String    @id @default(uuid())
   title     String    @default("New Chat")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)  // CASCADE DELETE
+  
+  @@index([userId])
 }
 
 model Message {
@@ -27,14 +80,22 @@ model Message {
   createdAt DateTime @default(now())
   model     String?
   versions  Json?    // Store edit history [{role, content, model, createdAt}]
+  
+  @@index([sessionId])
 }
+
 
 model ModelSettings {
   id           String   @id @default(uuid())
-  modelId      String   @unique
+  modelId      String   
+  userId       String   // User-specific settings
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   systemPrompt String?  @db.Text
   useRAG       Boolean  @default(true)
   temperature  Float    @default(0.7)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  @@unique([modelId, userId]) // One setting per model per user
+  @@index([userId])
 }

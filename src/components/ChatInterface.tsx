@@ -3,12 +3,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Send, Sparkles, User, Bot, StopCircle, Edit2, AlertCircle, RefreshCw, Copy, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 
 export interface Message {
     role: 'user' | 'assistant';
     content: string;
     model?: string;
     id?: string;
+    versions?: { content: string, model?: string, createdAt: any }[];
+    createdAt?: string; // Added timestamp
 }
 
 interface ChatInterfaceProps {
@@ -27,6 +30,8 @@ interface ChatInterfaceProps {
     error?: string | null;
 }
 
+
+
 const ChatInterface = ({
     messages,
     inputValue,
@@ -42,9 +47,11 @@ const ChatInterface = ({
     onRegenerate,
     error
 }: ChatInterfaceProps) => {
+    const { user } = useAuth();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editValue, setEditValue] = useState("");
+    const [versionMap, setVersionMap] = useState<Record<number, number>>({});
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,7 +81,23 @@ const ChatInterface = ({
     };
 
     return (
-        <div className="flex-1 h-full flex flex-col bg-white overflow-hidden relative">
+        <div
+            className="flex-1 h-full flex flex-col bg-white dark:bg-gray-900 overflow-hidden relative"
+            style={{
+                '--chat-bg': user?.backgroundImage ? `url(${user.backgroundImage})` : 'none',
+                '--bg-opacity': user?.backgroundOpacity || 0.1
+            } as React.CSSProperties}
+        >
+            {/* Custom Background Image */}
+            <div
+                className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
+                style={{
+                    backgroundImage: 'var(--chat-bg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    opacity: 'var(--bg-opacity, 0.5)'
+                }}
+            />
 
             {/* Scrollable Chat Area - Full Width */}
             <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
@@ -83,12 +106,12 @@ const ChatInterface = ({
                     {/* Welcome Screen */}
                     {messages.length === 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-center mt-20"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center"
                         >
                             <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent mb-2">Hello,</h2>
-                            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-12">
+                            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 leading-tight mb-12">
                                 How can I help you today?
                             </h2>
 
@@ -112,6 +135,14 @@ const ChatInterface = ({
                             const isLastMessage = index === messages.length - 1;
                             const isUser = msg.role === 'user';
 
+                            // Versioning Logic
+                            const versions = (msg.versions || []) as any[];
+                            const allVersions = [...versions, { content: msg.content, model: msg.model }];
+                            const currentVersionIndex = versionMap[index] !== undefined ? versionMap[index] : allVersions.length - 1;
+                            const displayedContent = allVersions[currentVersionIndex]?.content || msg.content;
+                            const displayedModel = allVersions[currentVersionIndex]?.model || msg.model;
+                            const totalVersions = allVersions.length;
+
                             return (
                                 <motion.div
                                     key={index}
@@ -119,10 +150,48 @@ const ChatInterface = ({
                                     animate={{ opacity: 1, y: 0 }}
                                     className={`group flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                                 >
-                                    {/* Sender Name */}
-                                    <div className={`flex items-center gap-2 mb-1 text-xs font-bold text-gray-400 uppercase tracking-wider ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        {isUser ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
-                                        <span>{isUser ? 'You' : (msg.model || 'Assistant')}</span>
+                                    <div className={`
+                                        group relative px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-[85%] shadow-sm transition-all
+                                        ${isUser
+                                            ? 'bg-[#E8F0FE] dark:bg-blue-900/30 text-gray-800 dark:text-gray-100 rounded-br-sm border border-transparent dark:border-blue-800'
+                                            : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm border border-gray-100 dark:border-gray-700'
+                                        }
+                                    `}>
+                                        {/* Model Badge + Timestamp for AI */}
+                                        {!isUser && (
+                                            <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100 dark:border-gray-700">
+                                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                                    <Bot className="w-3 h-3" />
+                                                    {displayedModel}
+                                                </span>
+                                                {msg.createdAt && (
+                                                    <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Version Navigator */}
+                                        {totalVersions > 1 && (
+                                            <div className={`flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 ml-2 ${isUser ? 'mr-auto' : 'ml-auto'}`}>
+                                                <button
+                                                    onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.max(0, currentVersionIndex - 1) }))}
+                                                    disabled={currentVersionIndex === 0}
+                                                    className="hover:text-gray-900 disabled:opacity-30 px-1"
+                                                >
+                                                    &lt;
+                                                </button>
+                                                <span>{currentVersionIndex + 1}/{totalVersions}</span>
+                                                <button
+                                                    onClick={() => setVersionMap(prev => ({ ...prev, [index]: Math.min(totalVersions - 1, currentVersionIndex + 1) }))}
+                                                    disabled={currentVersionIndex === totalVersions - 1}
+                                                    className="hover:text-gray-900 disabled:opacity-30 px-1"
+                                                >
+                                                    &gt;
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Bubble / Input */}
@@ -145,7 +214,7 @@ const ChatInterface = ({
                                                 ? 'bg-black text-white rounded-br-sm'
                                                 : 'bg-[#F0F4F9] text-gray-800 rounded-bl-sm'
                                                 }`}>
-                                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                                <p className="whitespace-pre-wrap">{displayedContent}</p>
                                             </div>
 
                                             {/* Action Buttons Container */}
@@ -153,7 +222,7 @@ const ChatInterface = ({
 
                                                 {/* Copy Button */}
                                                 <button
-                                                    onClick={() => copyToClipboard(msg.content)}
+                                                    onClick={() => copyToClipboard(displayedContent)}
                                                     className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition-colors"
                                                     title="Copy to clipboard"
                                                 >
@@ -163,7 +232,7 @@ const ChatInterface = ({
                                                 {/* Edit Button (User only) */}
                                                 {isUser && !isLoading && (
                                                     <button
-                                                        onClick={() => startEditing(index, msg.content)}
+                                                        onClick={() => startEditing(index, displayedContent)}
                                                         className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition-colors"
                                                         title="Edit message"
                                                     >
@@ -171,8 +240,8 @@ const ChatInterface = ({
                                                     </button>
                                                 )}
 
-                                                {/* Delete Button (Only Last Message - LIFO) */}
-                                                {isLastMessage && !isLoading && onDeleteMessage && (
+                                                {/* Delete Button (Allowed for ALL messages) */}
+                                                {!isLoading && onDeleteMessage && (
                                                     <button
                                                         onClick={() => onDeleteMessage(index)}
                                                         className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
@@ -212,9 +281,9 @@ const ChatInterface = ({
                                     <button
                                         key={i}
                                         onClick={() => onSendMessage(q)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all cursor-pointer shadow-sm"
+                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 transition-all cursor-pointer shadow-sm"
                                     >
-                                        <Sparkles className="w-3 h-3 text-blue-500" />
+                                        <Sparkles className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                                         <span>{q}</span>
                                     </button>
                                 ))}
@@ -241,10 +310,10 @@ const ChatInterface = ({
                                         <Bot className="w-3 h-3" />
                                         <span>Thinking...</span>
                                     </div>
-                                    <div className="flex gap-1 items-center bg-[#F0F4F9] px-6 py-4 rounded-2xl rounded-bl-sm">
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                                    <div className="flex gap-1 items-center bg-[#F0F4F9] dark:bg-gray-800 px-6 py-4 rounded-2xl rounded-bl-sm border border-transparent dark:border-gray-700">
+                                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                        <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                                     </div>
                                     {onStopGeneration && (
                                         <button
@@ -264,25 +333,25 @@ const ChatInterface = ({
             </div>
 
             {/* Input Area */}
-            <div className="w-full bg-gradient-to-t from-white via-white to-transparent pt-10 pb-6 px-4">
+            <div className="w-full bg-gradient-to-t from-white via-white/95 dark:from-gray-950 dark:via-gray-950 to-transparent pt-10 pb-6 px-4">
                 <div className="max-w-3xl mx-auto relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur opacity-5 group-hover:opacity-10 transition-opacity"></div>
-                    <div className="relative bg-[#F0F4F9] rounded-full flex items-center shadow-inner hover:shadow-md transition-all duration-300 border border-transparent focus-within:border-gray-300 focus-within:bg-white">
+                    <div className="relative bg-[#F0F4F9] dark:bg-gray-800 rounded-full flex items-center shadow-inner hover:shadow-md transition-all duration-300 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 focus-within:bg-white dark:focus-within:bg-gray-800">
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Ask me anything..."
-                            className="w-full bg-transparent text-gray-800 rounded-full py-4 pl-6 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
+                            className="w-full bg-transparent text-gray-800 dark:text-gray-100 rounded-full py-4 pl-6 pr-14 focus:outline-none placeholder-gray-500 text-[15px]"
                             disabled={isLoading}
                         />
                         <button
                             onClick={() => onSendMessage()}
                             disabled={isLoading || !inputValue.trim()}
                             className={`absolute right-2 p-2.5 rounded-full transition-all duration-200 ${isLoading || !inputValue.trim()
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-black text-white hover:bg-gray-800 hover:scale-105 active:scale-95 shadow-md'
+                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                : 'bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 hover:scale-105 active:scale-95 shadow-md'
                                 }`}
                         >
                             {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

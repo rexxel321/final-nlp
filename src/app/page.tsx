@@ -6,8 +6,11 @@ import ChatInterface, { Message } from "@/components/ChatInterface";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { generateId } from "@/lib/uuid";
+import { useAuth } from "@/context/AuthContext";
+import { saveGuestSession, loadGuestSession } from "@/lib/guestSession";
 
 export default function Home() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,14 +38,23 @@ export default function Home() {
 
     async function loadData() {
       try {
-        // History
-        const histRes = await fetch(`/api/history?sessionId=${currentSessionId}`);
-        if (histRes.ok) {
-          const data = await histRes.json();
-          if (data.messages) setMessages(data.messages);
+        // FOR GUESTS: Load from localStorage
+        if (!user) {
+          const guestData = loadGuestSession(currentSessionId!);
+          if (guestData) {
+            setMessages(guestData.messages || []);
+            console.log('[Guest] Loaded', guestData.messages?.length || 0, 'messages from localStorage');
+          }
+        } else {
+          // FOR LOGGED-IN USERS: Load from database
+          const histRes = await fetch(`/api/history?sessionId=${currentSessionId}`);
+          if (histRes.ok) {
+            const data = await histRes.json();
+            if (data.messages) setMessages(data.messages);
+          }
         }
 
-        // Suggestions
+        // Suggestions for everyone
         const suggRes = await fetch('/api/suggestions');
         if (suggRes.ok) {
           const data = await suggRes.json();
@@ -53,22 +65,92 @@ export default function Home() {
       }
     }
     loadData();
-  }, []);
+  }, [user]); // Re-run when user changes (login/logout)
 
   // Fetch Models
   useEffect(() => {
     async function fetchModels() {
+      const cloudModels = ['Llama 3', 'Gemini', 'Gemini Pro'];
+      let ollamaModels: string[] = [];
+
       try {
         const res = await fetch('http://127.0.0.1:11434/api/tags');
         if (res.ok) {
           const data = await res.json();
-          const modelNames = data.models?.map((m: any) => m.name) || [];
-          setAvailableModels(modelNames);
+          ollamaModels = data.models?.map((m: any) => `Ollama: ${m.name}`) || [];
         }
-      } catch (e) { console.error("Ollama unavailable"); }
+      } catch (e) {
+        console.error("Ollama unavailable");
+      }
+
+      setAvailableModels([...cloudModels, ...ollamaModels]);
     }
     fetchModels();
   }, []);
+
+  // Auto-save messages to localStorage for GUEST users
+  useEffect(() => {
+    if (!user && sessionId && messages.length > 0) {
+      saveGuestSession(sessionId, {
+        messages,
+        title: messages[0]?.content?.substring(0, 50) || "New Chat",
+        createdAt: Date.now()
+      });
+      console.log('[Guest] Auto-saved', messages.length, 'messages to localStorage');
+    }
+  }, [messages, sessionId, user]);
+
+  // Auth Event Listeners: Session Migration & Cleanup (Laravel-inspired)
+  useEffect(() => {
+    const handleLogout = () => {
+      // Clear all chat state on logout
+      console.log('[Logout] Clearing all state and refreshing...');
+      setMessages([]);
+      setSessionId('');
+
+      // Force page refresh to reset ALL state (fixes session visibility bug  #1)
+      window.location.reload();
+    };
+
+    const handleLogin = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { userId } = customEvent.detail || {};
+
+      if (!userId || !sessionId) return;
+
+      // Load guest data from localStorage
+      const guestData = loadGuestSession(sessionId);
+
+      // Migrate current session to logged-in user
+      try {
+        const res = await fetch('/api/sessions/migrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            messages: guestData?.messages || messages, // Upload localStorage messages
+            title: guestData?.title || "New Chat"
+          })
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          console.log(`[Auth] Session migrated: ${result.messageCount} messages saved to DB`);
+          setRefreshTrigger(prev => prev + 1); // Refresh sidebar to show session
+        }
+      } catch (e) {
+        console.error('[Auth] Session migration failed:', e);
+      }
+    };
+
+    window.addEventListener('auth:logout', handleLogout);
+    window.addEventListener('auth:login', handleLogin as EventListener);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout);
+      window.removeEventListener('auth:login', handleLogin as EventListener);
+    };
+  }, [sessionId]);
 
   // Unload previous model when switching
   const prevModelRef = useRef(selectedModel);
@@ -113,24 +195,47 @@ export default function Home() {
     const lastUserIndex = messages.findLastIndex(m => m.role === 'user');
     if (lastUserIndex === -1) return;
 
+    const lastAssistantMessage = messages[messages.length - 1].role === 'assistant' ? messages[messages.length - 1] : null;
+    const regenerateId = lastAssistantMessage?.id;
+
     // Slice history up to that user message (inclusive)
-    // Actually, we just need to remove the AI response if it exists after it.
-    // Simplifying: Just take everything up to the last user message
     const previousMessages = messages.slice(0, lastUserIndex);
     const lastUserMsg = messages[lastUserIndex];
 
-    setMessages(previousMessages);
-    handleSendMessage(lastUserMsg.content, previousMessages);
+    setMessages(previousMessages); // Removing the Assistant message from UI temporarily
+    handleSendMessage(lastUserMsg.content, previousMessages, regenerateId);
   };
 
-  const handleDeleteMessage = (index: number) => {
-    // LIFO Policy: Only allow deleting the last message (or last pair if needed, but user said "one by one from latest")
-    if (index === messages.length - 1) {
-      setMessages(prev => prev.slice(0, -1));
+  const handleDeleteMessage = async (index: number) => {
+    const msgToDelete = messages[index];
+    if (!msgToDelete.id) return; // Cannot delete unsaved messages
+
+    // Optimistic Update
+    setMessages(prev => {
+      const newMessages = [...prev];
+      // Packet Deletion Logic: If User message, delete paired Assistant response
+      if (msgToDelete.role === 'user' && index + 1 < newMessages.length && newMessages[index + 1].role === 'assistant') {
+        newMessages.splice(index, 2); // Remove User + Assistant
+      } else {
+        newMessages.splice(index, 1); // Remove Just This Message
+      }
+
+      if (newMessages.length === 0) {
+        setError(null);
+      }
+      return newMessages;
+    });
+
+    // API Call
+    try {
+      await fetch(`/api/chat/message?id=${msgToDelete.id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Failed to delete message", e);
+      // Ideally revert state here, but skipping for simplicity
     }
   };
 
-  const handleSendMessage = async (messageOverride?: string, customHistory?: Message[]) => {
+  const handleSendMessage = async (messageOverride?: string, customHistory?: Message[], regenerateId?: string) => {
     const textToSend = messageOverride || inputValue;
     if (!textToSend.trim() || isLoading) return;
 
@@ -142,6 +247,15 @@ export default function Home() {
     // If using custom history (e.g. from edit), use that. Otherwise use current messages.
     const currentHistory = customHistory || messages;
     const newMessage: Message = { role: 'user', content: textToSend };
+
+    // Optimistically add user message (will be replaced/updated by DB version usually, but for now strict append)
+    // Note: To get the real ID of the user message, we'd need to wait for response. 
+    // But typically we only need ID for deletion/edit.
+    // For now, we'll rely on reloading or just accepting it might fail to delete until refresh.
+    // BETTER: The API *should* return the user message ID too? 
+    // Current API doesn't return the user message object. 
+    // We'll proceed with optimistic update first.
+
     const updatedMessages = [...currentHistory, newMessage];
 
     setMessages(updatedMessages);
@@ -162,7 +276,8 @@ export default function Home() {
         body: JSON.stringify({
           messages: updatedMessages,
           model: selectedModel,
-          sessionId: sessionId
+          sessionId: sessionId,
+          regenerateId: regenerateId // Pass ID if regenerating
         }),
         signal: controller.signal
       });
@@ -175,13 +290,42 @@ export default function Home() {
       const data = await response.json();
 
       if (data.response) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response, model: selectedModel }]);
+        // Use returned full object if available (contains versions, id, etc.)
+        const newMsg: Message = data.messageObject ? {
+          role: 'assistant',
+          content: data.messageObject.content,
+          model: data.messageObject.model || selectedModel,
+          id: data.messageObject.id,
+          versions: data.messageObject.versions,
+          createdAt: data.messageObject.createdAt
+        } : {
+          role: 'assistant',
+          content: data.response,
+          model: selectedModel,
+          id: data.regeneratedId || undefined
+        };
+
+        setMessages(prev => {
+          const newHistory = [...prev];
+          // Update User Message with DB version (to get ID/Timestamp)
+          if (data.userMessageObject && newHistory.length > 0) {
+            const lastIdx = newHistory.length - 1;
+            // Ensure we are updating the right message (User's last prompt)
+            if (newHistory[lastIdx].role === 'user') {
+              newHistory[lastIdx] = {
+                ...newHistory[lastIdx],
+                id: data.userMessageObject.id,
+                createdAt: data.userMessageObject.createdAt
+              };
+            }
+          }
+          return [...newHistory, newMsg];
+        });
 
         // Refresh sidebar if a new title was generated
         if (data.title) {
           setRefreshTrigger(prev => prev + 1);
         } else if (messages.length === 0) {
-          // Also refresh on first message just in case
           setTimeout(() => setRefreshTrigger(prev => prev + 1), 1000);
         }
 
@@ -192,7 +336,7 @@ export default function Home() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                messages: [...updatedMessages, { role: 'assistant', content: data.response }],
+                messages: [...updatedMessages, newMsg], // Use updatedMessages which has the user msg
                 model: selectedModel
               })
             });
@@ -203,7 +347,7 @@ export default function Home() {
           } catch (e) {
             console.error("Failed to fetch follow-ups", e);
           }
-        }, 3000); // 3 second delay as requested
+        }, 3000);
 
       } else {
         throw new Error("No response from AI");
@@ -276,22 +420,37 @@ export default function Home() {
           "flex-1 flex flex-col h-full relative transition-all duration-300 ease-in-out",
           isSidebarOpen ? "md:ml-64" : "ml-0"
         )}
+        style={{
+          backgroundImage: user?.backgroundImage ? `url(${user.backgroundImage})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
       >
-        <ChatInterface
-          messages={messages}
-          inputValue={inputValue}
-          setInputValue={setInputValue}
-          isLoading={isLoading}
-          onSendMessage={(msg) => handleSendMessage(msg)}
-          onSummarize={handleSummarize}
-          suggestions={suggestions}
-          followUps={followUps}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onStopGeneration={handleStopGeneration}
-          onRegenerate={handleRegenerate}
-          error={error}
-        />
+        {user?.backgroundImage && (
+          <div
+            className="absolute inset-0 bg-white z-0 pointer-events-none"
+            style={{ opacity: 1 - (user.backgroundOpacity || 0.3) }}
+          />
+        )}
+
+        <div className="relative z-10 h-full flex flex-col">
+          <ChatInterface
+            messages={messages}
+            inputValue={inputValue}
+            setInputValue={setInputValue}
+            isLoading={isLoading}
+            onSendMessage={(msg) => handleSendMessage(msg)}
+            onSummarize={handleSummarize}
+            suggestions={suggestions}
+            followUps={followUps}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+            onStopGeneration={handleStopGeneration}
+            onRegenerate={handleRegenerate}
+            error={error}
+          />
+        </div>
       </motion.div>
     </div>
   );
